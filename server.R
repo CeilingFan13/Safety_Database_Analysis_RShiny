@@ -1,21 +1,27 @@
 library(readxl)
-# Define server logic required to draw a histogram
-server <- function(input, output) {
-  output$contents <- renderTable({
-    # make sure there is input file
-    req(input$file1)
-    # determine method to open file according to file type
-    if (input$format == "Excel") {
-      df <- read_excel(input$file1$datapath)
-      return(df)
-    }
-    if (input$format == "CSV") {
-      df <-
-        read.table(input$file1$datapath,
-                   header = input$header,
-                   sep = input$sep)
-      return(df)
-    }
+library(shiny)
+library(ggplot2)
+
+server <- function(input, output, session) {
+  # enable column and row selection
+  info <- eventReactive(input$choice, {
+    inFile <- input$file1
+    req(inFile)
+    df <- read.table(input$file1$datapath,
+                     header = input$header,
+                     sep = input$sep)
+    c_vars <- names(df)
+    r_vars <- row.names(df)
+    updateSelectInput(session, "columns", 
+                      "Columns to show", choices = c_vars)
+    updateSelectInput(session, "rows", 
+                      "Rows to show", choices = r_vars)
+    return(df)
+  })
+   output$contents <- DT::renderDataTable({
+     data <- info()
+     data <- subset(data[input$rows,], select = input$columns)
+     return(data)
   })
 }
 

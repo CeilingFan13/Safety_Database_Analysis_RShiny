@@ -1,3 +1,5 @@
+library(shiny)
+library(ggplot2)
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   
@@ -10,10 +12,10 @@ ui <- fluidPage(
       
       # select a file to be analyzed
       fileInput(inputId = "file1",
-                label = "Choose Excel or CSV file",
+                label = "Choose a CSV file",
                 multiple = FALSE,
                 accept = c("text/csv", 
-                          ".csv", ".xlsx")),
+                          ".csv")),
     
       # horizontal line
     #tag$hr(),
@@ -23,13 +25,6 @@ ui <- fluidPage(
 #    ),
     
     # check if file has header
-    radioButtons(
-      inputId = "format",
-      label = "Check the format of input file",
-      choices = c("CSV", "Excel"),
-      selected = "Excel"),
-    
-    # check if file has header
     checkboxInput(
       inputId = "header",
       label = "Check if the file contains header",
@@ -37,11 +32,20 @@ ui <- fluidPage(
     
     radioButtons(inputId = "sep", label = "Type of Separator",
       choices = c(Comma = ",", Semicolon = ";", Tab = "\t", None = ""),
-      selected = "")
+      selected = ","),
+    actionButton("choice", "incorporate external information"),
+
+    selectInput(inputId = "columns", 
+                       label = "Columns to show",
+                       choices = NULL, multiple = TRUE),
+
+    selectInput(inputId = "rows",
+                label = "Rows to show",
+                choices = NULL, multiple = TRUE)
     
   ),
   # Show a plot of the generated distribution
-  mainPanel(tableOutput("contents"))
+  mainPanel(DT::dataTableOutput("contents"))
   
 ))
 
