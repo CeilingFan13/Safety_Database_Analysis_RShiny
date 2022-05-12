@@ -1,17 +1,13 @@
 library(shiny)
 library(ggplot2)
 library(shinyWidgets)
+library(kableExtra)
+library(knitr)
+library(gt)
+library(gtsummary)
 
 ui <- navbarPage(title = "Safety Database",
                  fluidRow(
-                   column(3, 
-                          pickerInput(
-                     inputId = "subject",
-                     label = "Subject",
-                     choices = NULL,
-                     multiple = TRUE,
-                     options = list("actions-box" = TRUE)
-                   )),
                    column(3, 
                           pickerInput(
                             inputId = "site",
@@ -20,6 +16,14 @@ ui <- navbarPage(title = "Safety Database",
                             multiple = TRUE,
                             options = list("actions-box" = TRUE)
                           )),
+                   column(3, 
+                          pickerInput(
+                     inputId = "subject",
+                     label = "Subject",
+                     choices = NULL,
+                     multiple = TRUE,
+                     options = list("actions-box" = TRUE)
+                   )),
                    column(3, 
                           pickerInput(
                             inputId = "preferred_term",
@@ -87,8 +91,8 @@ ui <- navbarPage(title = "Safety Database",
                        id = "tabs",
                        tabPanel("original_data",
                                 DT::dataTableOutput("contents")),
-                       tabPanel("page2"),
-                       tabPanel("page3")
+                       tabPanel("Summary Table", gt_output("summary_table")),
+                       tabPanel("page3", plotOutput("pie_soc"))
                      ))
                    )
                    
