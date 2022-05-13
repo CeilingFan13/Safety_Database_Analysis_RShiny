@@ -91,7 +91,7 @@ ui <- navbarPage(title = "Safety Database",
                        id = "tabs",
                        tabPanel("original_data",
                                 DT::dataTableOutput("contents")),
-                       tabPanel("Summary Table", gt_output("summary_table")),
+                       tabPanel("Summary Table", tableOutput("summary_table")),
                        tabPanel("page3", plotOutput("pie_soc"))
                      ))
                    )
