@@ -7,43 +7,44 @@ library(gt)
 library(gtsummary)
 
 ui <- navbarPage(title = "Safety Database",
-                 fluidRow(
-                   column(3, 
-                          pickerInput(
-                            inputId = "site",
-                            label = "Site",
-                            choices = NULL,
-                            multiple = TRUE,
-                            options = list("actions-box" = TRUE)
-                          )),
-                   column(3, 
-                          pickerInput(
-                     inputId = "subject",
-                     label = "Subject",
-                     choices = NULL,
-                     multiple = TRUE,
-                     options = list("actions-box" = TRUE)
-                   )),
-                   column(3, 
-                          pickerInput(
-                            inputId = "preferred_term",
-                            label = "Preferred Term",
-                            choices = NULL,
-                            multiple = TRUE, 
-                            options = list("actions-box" = TRUE)
-                          )),
-                   column(3, 
-                          pickerInput(
-                            inputId = "organ_class",
-                            label = "System Organ Class",
-                            choices = NULL,
-                            multiple = TRUE,
-                            options = list("actions-box" = TRUE)
-                          ))
-                 ),
+                 
                  # create summary page for CSV upload and display
                  tabPanel(
                    title = "Summary",
+                   fluidRow(
+                     column(3, 
+                            pickerInput(
+                              inputId = "site",
+                              label = "Site",
+                              choices = NULL,
+                              multiple = TRUE,
+                              options = list("actions-box" = TRUE)
+                            )),
+                     column(3, 
+                            pickerInput(
+                              inputId = "subject",
+                              label = "Subject",
+                              choices = NULL,
+                              multiple = TRUE,
+                              options = list("actions-box" = TRUE)
+                            )),
+                     column(3, 
+                            pickerInput(
+                              inputId = "preferred_term",
+                              label = "Preferred Term",
+                              choices = NULL,
+                              multiple = TRUE, 
+                              options = list("actions-box" = TRUE)
+                            )),
+                     column(3, 
+                            pickerInput(
+                              inputId = "organ_class",
+                              label = "System Organ Class",
+                              choices = NULL,
+                              multiple = TRUE,
+                              options = list("actions-box" = TRUE)
+                            ))
+                   ),
                    # Sidebar with a slider input for number of bins
                    sidebarLayout(
                      sidebarPanel(
@@ -92,7 +93,12 @@ ui <- navbarPage(title = "Safety Database",
                        tabPanel("original_data",
                                 DT::dataTableOutput("contents")),
                        tabPanel("Summary Table", tableOutput("summary_table")),
-                       tabPanel("page3", plotOutput("pie_soc"))
+                       tabPanel("SOC vs. Treatment", 
+                                fluidRow(column(6, plotOutput("heatmap")),
+                                         column(6, plotOutput("pie_soc"))),
+                                fluidRow(tableOutput("soc_tr"))
+                                
+                                )
                      ))
                    )
                    
