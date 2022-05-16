@@ -96,6 +96,7 @@ ui <- navbarPage(title = "Safety Database",
                        tabPanel("SOC vs. Treatment", 
                                 fluidRow(column(6, plotOutput("heatmap")),
                                          column(6, plotOutput("pie_soc"))),
+                                hr(),
                                 fluidRow(tableOutput("soc_tr"))
                                 
                                 )
