@@ -12,6 +12,7 @@ library(knitr)
 library(gt)
 library(gtsummary)
 library(heatmaply)
+library(epitools)
 
 ctcae <-
   server <- function(input, output, session) {
@@ -25,6 +26,11 @@ ctcae <-
         sep = input$sep,
         blank.lines.skip = TRUE
       )
+      # unify date format, may be a point of weakness
+      df$Onset.Date <- mdy(df$Onset.Date)
+      df$AE.End.Date <- mdy(df$AE.End.Date)
+      df$First.dose.date <- mdy(df$First.dose.date)
+      df$previous.dose.date <- mdy(df$previous.dose.date)
       #names(df) <- str_replace_all(names(df), c(" " = "_"))
       # change all PT and SOC to lowercase
       df$PT <- tolower(df$PT)
@@ -34,6 +40,8 @@ ctcae <-
       site_list <- c(unique(df$Site))
       pt_list <- c(unique(df$PT))
       soc_list <- c(unique(df$SOC))
+      treatment_list <- c(unique(df$Treatment)) %>% sort()
+      
       #c_vars <- names(df)
       r_vars <- row.names(df)
       #updateSelectInput(session, "columns",
@@ -53,8 +61,17 @@ ctcae <-
                         "Site",
                         choices = site_list,
                         selected = site_list)
+      updatePickerInput(session,
+                        "treatment1",
+                        "Treatment Group 1",
+                        choices = treatment_list)
+      updatePickerInput(session,
+                        "treatment2",
+                        "Treatment Group 2",
+                        choices = treatment_list)
+
       updatePickerInput(
-        session,
+         session,
         "preferred_term",
         "Preferred Term",
         choices = pt_list,
@@ -69,6 +86,24 @@ ctcae <-
       )
       return(df)
     })
+    observeEvent(input$treatment1, {
+       data <- info()
+       updatePickerInput(
+          session = session,
+          inputId = "interest_ae",
+          choices = unique(data[data$Treatment == input$treatment1, "PT"])
+       )
+    }, ignoreInit = TRUE)
+    
+    observeEvent(input$treatment2, {
+       data <- info()
+       updatePickerInput(
+          session = session,
+          inputId = "interest_ae",
+          choices = unique(data[data$Treatment == input$treatment2, "PT"])
+       )
+    }, ignoreInit = TRUE)
+   
     output$contents <- DT::renderDataTable({
       data <- info()
       data <- subset(data[input$rows, ])#, select = input$columns)
@@ -93,9 +128,9 @@ ctcae <-
     })
     
     output$summary_table <- function() {
-      data1 <- info()
+      data <- info()
       data1 <-
-        df %>% select(any_of(c(
+        data %>% select(any_of(c(
           "Subject.ID", "SOC", "PT", "Treatment", "Grade"
         )))
       any_ae <- data1 %>%
@@ -157,8 +192,8 @@ ctcae <-
     }
     
     output$heatmap <- renderPlot({
-      data <- info()
-      data <- df %>% select(c("SOC", "Treatment")) %>% 
+      data0 <- info()
+      data <- data0 %>% select(c("SOC", "Treatment")) %>% 
         group_by(SOC, Treatment) %>% 
         summarise(n=n(), .groups = "keep")
       
@@ -172,8 +207,8 @@ ctcae <-
       return(h_map)
     })
     output$soc_tr <- renderTable({
-      data <- info()
-      data <- df %>% select(c("SOC", "Treatment")) %>% 
+      data0 <- info()
+      data <- data0 %>% select(c("SOC", "Treatment")) %>% 
         group_by(SOC, Treatment) %>% 
         summarise(n=n(), .groups = "keep")
       data2 <- data %>% mutate(pct=n*100/sum(as.numeric(data$n))) %>% 
@@ -192,6 +227,64 @@ ctcae <-
         select(-c(total, pct))
       data2 <- cbind(data2, soc_only[2])
       return(data2)
+    })
+    output$eair_table <- renderTable({
+       data <- info()
+       data0 <- data %>% 
+          mutate(duration = (as.numeric(difftime(previous.dose.date, First.dose.date))+1+7)/365.25) %>%
+          filter(Treatment == input$treatment, PT != input$interest_ae) 
+       data1 <- data %>% 
+          select(Subject.ID, Treatment, PT, Onset.Date, First.dose.date) %>% 
+          filter(Treatment == input$treatment, PT == input$interest_ae) %>%
+          mutate(duration = (as.numeric(difftime(Onset.Date, First.dose.date))+1)/365.25)
+       output$txt <- renderText({
+          calc <- length(unique(data1$Subject.ID)) * 100/(sum(data0$duration)+sum(data1$duration))
+          text <- paste("The exposure-adjusted incidence rate estimates that if 100 patients were treated for 1 year, ", calc, " patients would experience the event of interest.")
+          return(text)
+       })
+       return(data1)
+       
+    })
+    output$crude_incidence <- renderPlot({
+       df <- info()
+       data1 <- df %>% 
+          select(Subject.ID, SOC, PT, Treatment) %>% 
+          distinct() %>%
+          group_by(SOC, PT, Treatment) %>%
+          summarise(n=n(), .groups = "keep")
+       
+       data2 <- data1 %>% mutate(pct=n*100/sum(as.numeric(data1$n))) %>% 
+          mutate(var1 = paste(n, "(", format(round(pct, digits = 2), nsmall = 2), ")")) %>%
+          mutate(cat = "Incidence Rate (%)")
+          
+       data2 <- data2[data2$Treatment %in% c(input$treatment1, input$treatment2), ]
+       # data3 <- data2 %>% select(- pct) %>% 
+       #    select(- n) %>%
+       #    spread(Treatment, var1)
+       
+       p <- ggplot(data2, aes(x=pct, y=PT, color = as.factor(Treatment))) + 
+          geom_point(size = 3, position = position_jitter(h=0.1, w=0.1)) +
+          facet_grid(rows = vars(SOC), cols = vars(cat), scales = "free", space = "free") +
+          theme(legend.position = "bottom") +
+          theme(strip.text.y = element_text(angle = 90, size = 8))
+       
+       output$crude_wald <- renderTable({
+          data5 <- df %>% 
+             select(Subject.ID, PT, Treatment) %>% 
+             group_by(Subject.ID, PT, Treatment) %>% 
+             distinct()
+          data5 <- data5[data5$Treatment %in% c(input$treatment1, input$treatment2), ]
+          for (x in 1:length(data5$PT)) {
+             if (data5$PT[x] != "headache") {
+                data5$PT[x] <- 0
+             }
+          }
+          # return wald test with CI
+          return(riskratio.wald(table(data5$PT, data5$Treatment))$measure)
+       })
+       
+       
+       return(p)
     })
    # output$summary_table <- render_gt({
    #   data <- info()
