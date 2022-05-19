@@ -94,7 +94,7 @@ ui <- navbarPage(title = "Safety Database",
                                 ),
                                 DT::dataTableOutput("contents")),
                        tabPanel("Summary Table", tableOutput("summary_table")),
-                       tabPanel("Forest Plot and Confidence Interval", 
+                       tabPanel("Crude Incidence Rate and Wald's Confidence Interval", 
                                 fluidRow(
                                                column(6,
                                                       pickerInput(
@@ -111,8 +111,8 @@ ui <- navbarPage(title = "Safety Database",
                                                         multiple = FALSE
                                                       ))
                                                ),
-                                column(6, plotOutput("crude_incidence", height = "750px")),
-                                column(6, tableOutput("crude_wald"))
+                                column(5, plotOutput("crude_incidence", height = "790px")),
+                                column(7, plotOutput("crude_wald", height = "750px"))
                                 
                        ),
                        tabPanel("SOC vs. Treatment", 
