@@ -1,4 +1,5 @@
 library(shiny)
+library(shinyjs)
 library(ggplot2)
 library(shinyWidgets)
 library(kableExtra)
@@ -7,15 +8,16 @@ library(gt)
 library(gtsummary)
 library(dplyr)
 
-ui <- navbarPage(title = "Safety Database",
+ui <- navbarPage(useShinyjs(),
+                 title = "Safety Database",
                  # create summary page for CSV upload and display
                  tabPanel(
                    title = "Summary",
                    
                    # Sidebar with a slider input for number of bins
                    sidebarLayout(
-                     sidebarPanel(
-                       width = 2,
+                     sidebarPanel(id = "sidebar",
+                       width = 1,
                        # select a file to be analyzed
                        fileInput(
                          inputId = "file1",
@@ -25,7 +27,7 @@ ui <- navbarPage(title = "Safety Database",
                        ),
                        # check if file has header
                        checkboxInput(inputId = "header",
-                                     label = "Check if the file contains header",
+                                     label = "Contains Header",
                                      TRUE),
                        radioButtons(
                          inputId = "sep",
@@ -94,103 +96,98 @@ ui <- navbarPage(title = "Safety Database",
                                 ),
                                 DT::dataTableOutput("contents")),
                        tabPanel("Summary Table", tableOutput("summary_table")),
-                       tabPanel("Crude Incidence Rate and Wald's Confidence Interval", 
+                       tabPanel("Crude Incidence Rate and Wald's CI", 
                                 fluidRow(
-                                               column(6,
+                                               column(4,
                                                       pickerInput(
                                                         inputId = "treatment1",
                                                         label = "Treatment Group 1",
                                                         choices = NULL,
                                                         multiple = FALSE
                                                       )),
-                                               column(6,
+                                               column(4,
                                                       pickerInput(
                                                         inputId = "treatment2",
                                                         label = "Treatment Group 2",
                                                         choices = "",
                                                         multiple = FALSE
                                                       ))
+                                               
                                                ),
                                 column(5, plotOutput("crude_incidence", height = "790px")),
                                 column(7, plotOutput("crude_wald", height = "750px"))
                                 
                        ),
-                       tabPanel("SOC vs. Treatment", 
-                                fluidRow(column(6, plotOutput("heatmap")),
-                                         column(6, plotOutput("pie_soc"))),
-                                hr(),
-                                fluidRow(tableOutput("soc_tr"))
-                                
-                                ),
+                       
 
                      #   tabPanel("Exposure Adjusted Incidence Rate",
-                     #            # fluidRow(
-                     #            #   column(6,
-                     #            #          pickerInput(
-                     #            #            inputId = "treatment1",
-                     #            #            label = "Treatment Group 1",
-                     #            #            choices = NULL,
-                     #            #            multiple = FALSE
-                     #            #          )),
-                     #            #   column(6,
-                     #            #          pickerInput(
-                     #            #            inputId = "interest_ae",
-                     #            #            label = "Adverse Event of Interest",
-                     #            #            choices = "",
-                     #            #            multiple = FALSE
-                     #            #          ))
-                     #            #   ),
+                     #            fluidRow(
+                     #              column(6,
+                     #                     pickerInput(
+                     #                       inputId = "treatment1",
+                     #                       label = "Treatment Group 1",
+                     #                       choices = NULL,
+                     #                       multiple = FALSE
+                     #                     )),
+                     #              column(6,
+                     #                     pickerInput(
+                     #                       inputId = "interest_ae",
+                     #                       label = "Adverse Event of Interest",
+                     #                       choices = "",
+                     #                       multiple = FALSE
+                     #                     ))
+                     #              ),
                      #            fluidRow(tableOutput("eair_table"), textOutput("txt"))
                      # ),
-                     tabPanel("EAIR", 
+                     
+                     tabPanel("Exposure-Adjusted Incidence Rate and Wald's CI", 
                                 fluidRow("Most appropriate when the hazard rate of the specific event is relatively constant over the duration of the study. Not approriate for events that usually occur early in the study."),
                               fluidRow(
-                                column(2, 
+                                # column(2, 
+                                #        pickerInput(
+                                #          inputId = "interest_ae",
+                                #                       label = "Adverse Event of Interest",
+                                #                       choices = "",
+                                #                       multiple = FALSE)),
+                                column(4,
                                        pickerInput(
-                                         inputId = "interest_ae",
-                                                      label = "Adverse Event of Interest",
-                                                      choices = "",
-                                                      multiple = FALSE)),
-                                column(5,
-                                       pickerInput(
-                                         inputId = "treatment1",
+                                         inputId = "treatment_1",
                                          label = "Treatment Group 1",
                                          choices = NULL,
                                          multiple = FALSE
                                        )),
-                                column(5, pickerInput(
-                                  inputId = "treatment2",
+                                column(4, pickerInput(
+                                  inputId = "treatment_2",
                                   label = "Treatment Group 2",
                                   choices = NULL,
                                   multiple = FALSE
-                                ))
+                                )),
+                                column(4, numericInput(inputId = "effect_days", label = "Duration of Drug Action (days)", value = 0, min = 0, max = 1000))
                               ),
-                              fluidRow(
-                                column(2, "Total Number of Group Population"),
-                                column(5, 
-                                       textInput(
-                                         inputId = "trt1_pop",
-                                         label = NULL,
-                                         value = 30)),
-                                column(5,
-                                       textInput(
-                                         inputId = "trt2_pop",
-                                         label = NULL,
-                                         value = 30))
+                              fluidRow(column(5, plotOutput("eair_incidence", height = "790px")), 
+                                       column(7, plotOutput("eair_wald", height = "790px")),
+                                       textOutput("txt"))
+                              # fluidRow(
+                              #   column(2, "Duration of Treatment (years) Median (outside of dummy data)"),
+                              #   column(5, 
+                              #          textInput(
+                              #            inputId = "trt1_year",
+                              #            label = NULL,
+                              #            value = 0.0)),
+                              #   column(5,
+                              #          textInput(
+                              #            inputId = "trt2_year",
+                              #            label = NULL,
+                              #            value = 0.0))
+                              # )
                               ),
-                              fluidRow(
-                                column(2, "Duration of Treatment (years) Median (outside of dummy data)"),
-                                column(5, 
-                                       textInput(
-                                         inputId = "trt1_year",
-                                         label = NULL,
-                                         value = 0.0)),
-                                column(5,
-                                       textInput(
-                                         inputId = "trt2_year",
-                                         label = NULL,
-                                         value = 0.0))
-                              ))
+                     tabPanel("SOC vs. Treatment", 
+                              fluidRow(column(6, plotOutput("heatmap")),
+                                       column(6, plotOutput("pie_soc"))),
+                              hr(),
+                              fluidRow(tableOutput("soc_tr"))
+                              
+                     )
                      )
                    )
                    

@@ -13,6 +13,8 @@ library(gt)
 library(gtsummary)
 library(heatmaply)
 library(epitools)
+library(lubridate)
+library(grid)
 
 ctcae <-
    server <- function(input, output, session) {
@@ -69,6 +71,14 @@ ctcae <-
                            "treatment2",
                            "Treatment Group 2",
                            choices = treatment_list)
+         updatePickerInput(session,
+                           "treatment_1",
+                           "Treatment Group 1",
+                           choices = treatment_list)
+         updatePickerInput(session,
+                           "treatment_2",
+                           "Treatment Group 2",
+                           choices = treatment_list)
          
          updatePickerInput(
             session,
@@ -86,24 +96,47 @@ ctcae <-
          )
          return(df)
       })
+      #-------------------------------------------------------------------------
+      # reactive for treatment group 2 on tab that performs wald test
       observeEvent(input$treatment1, {
-         data <- info()
+         data1 <- info()
          updatePickerInput(
             session = session,
-            inputId = "interest_ae",
-            choices = unique(data[data$Treatment == input$treatment1, "PT"])
+            inputId = "treatment2",
+            choices = sort(unique(subset(data1$Treatment, data1$Treatment != input$treatment1)))
          )
-      }, ignoreInit = TRUE)
-      
-      observeEvent(input$treatment2, {
-         data <- info()
+      })
+      observeEvent(input$treatment_1, {
+         data1 <- info()
          updatePickerInput(
             session = session,
-            inputId = "interest_ae",
-            choices = unique(data[data$Treatment == input$treatment2, "PT"])
+            inputId = "treatment_2",
+            choices = sort(unique(subset(data1$Treatment, data1$Treatment != input$treatment_1)))
          )
-      }, ignoreInit = TRUE)
-      
+      })
+    
+      # dropdown input from page "EAIR"
+      # observeEvent(input$treatment1, {
+      #    data <- info()
+      #    updatePickerInput(
+      #       session = session,
+      #       inputId = "interest_ae",
+      #       choices = unique(data[data$Treatment == input$treatment1, "PT"])
+      #    )
+      # }, ignoreInit = TRUE)
+      # 
+      # observeEvent(input$treatment2, {
+      #    data <- info()
+      #    updatePickerInput(
+      #       session = session,
+      #       inputId = "interest_ae",
+      #       choices = unique(data[data$Treatment == input$treatment2, "PT"])
+      #    )
+      # }, ignoreInit = TRUE)
+      observeEvent(input$wald_type_test, {
+         
+      })
+      #-------------------------------------------------------------------------
       output$contents <- DT::renderDataTable({
          data <- info()
          data <- subset(data[input$rows,])#, select = input$columns)
@@ -233,33 +266,145 @@ ctcae <-
          data2 <- cbind(data2, soc_only[2])
          return(data2)
       })
-      output$eair_table <- renderTable({
-         data <- info()
-         data0 <- data %>%
-            mutate(duration = (as.numeric(
-               difftime(previous.dose.date, First.dose.date)
-            ) + 1 + 7) / 365.25) %>%
-            filter(Treatment == input$treatment, PT != input$interest_ae)
-         data1 <- data %>%
-            select(Subject.ID, Treatment, PT, Onset.Date, First.dose.date) %>%
-            filter(Treatment == input$treatment, PT == input$interest_ae) %>%
-            mutate(duration = (as.numeric(
-               difftime(Onset.Date, First.dose.date)
-            ) + 1) / 365.25)
-         output$txt <- renderText({
-            calc <-
-               length(unique(data1$Subject.ID)) * 100 / (sum(data0$duration) + sum(data1$duration))
-            text <-
-               paste(
-                  "The exposure-adjusted incidence rate estimates that if 100 patients were treated for 1 year, ",
-                  calc,
-                  " patients would experience the event of interest."
-               )
-            return(text)
-         })
-         return(data1)
+      output$eair_incidence <- renderPlot({
+         df <- info()
+         time <- df %>% 
+            filter(Treatment %in% c(input$treatment_1, input$treatment_2)) %>%
+            select(Subject.ID, Treatment, PT, Onset.Date, First.dose.date, previous.dose.date) %>%
+            mutate(duration1 = as.numeric((difftime(Onset.Date, First.dose.date, units = "days")) + 1) / 365.25) %>%
+            mutate(duration2 = as.numeric((difftime(previous.dose.date, First.dose.date, units = "days")) + 1 + input$effect_days) / 365.25) %>%
+            select(Treatment, PT, duration1, duration2)
+            
+         data1 <- df %>%
+            select(Subject.ID, SOC, PT, Treatment) %>%
+            distinct() %>%
+            group_by(SOC, PT, Treatment) %>%
+            summarise(n = n(), .groups = "keep") %>%
+            filter(Treatment %in% c(input$treatment_1, input$treatment_2))
+         person_time <- c()
+         for (i in 1:length(data1$PT)) {
+            trt <- data1$Treatment[i]
+            ae <- data1$PT[i]
+            yes_ae0 <- subset(time, time$PT == ae)
+            no_ae0 <- subset(time, time$PT != ae)
+            yes_ae1 <- subset(yes_ae0, yes_ae0$Treatment == trt)
+            no_ae1 <- subset(no_ae0, no_ae0$Treatment == trt)
+            person_time[i] <- data1$n[i] * 100 / (sum(yes_ae1$duration1)+sum(no_ae1$duration2))
+            
+         }
+         
+         data2 <-data1 %>% 
+            cbind(person_time) %>%
+            mutate(cat = "Incidence Rate (%)")
+         colnames(data2[5]) <- "pct"
+         
+         p <-
+            ggplot(data2, aes(
+               x = unlist(data2[, 5]),
+               y = PT,
+               color = as.factor(Treatment)
+            )) +
+            geom_point(size = 3, position = position_jitter(h = 0.1, w = 0.1)) +
+            facet_grid(
+               rows = vars(SOC),
+               cols = vars(cat),
+               scales = "free",
+               space = "free"
+            ) +
+            theme(legend.position = "bottom") +
+            theme(strip.text.y = element_text(angle = 90, size = 8),
+                  axis.title.y = element_blank()) +
+            theme(axis.title.x = element_blank())
+         
+         output$eair_wald <- renderPlot({
+            data5 <- data2
+            # run through the AEs in treatment groups and return wald test with CI
+            wald_table <- c()
+            soc_list <- c()
+            for (n in unique(data5$PT)) {
+               data6 <- data5
+               for (x in 1:length(data6$PT)) {
+                  if (data6$PT[x] != n) {
+                     data6$PT[x] <- 0
+                  }
+               }
+               # https://sphweb.bumc.bu.edu/otlt/mph-modules/ph717-quantcore/r-for-ph717/R-for-PH71714.html
+               wald_table <- 
+                  rbind(wald_table,
+                        riskratio.wald(table(
+                           data6$PT, 
+                           c(data6[data6$Treatment == input$treatment1,]$Treatment, 
+                             data6[data6$Treatment == input$treatment2,]$Treatment)
+                        ))$measure[2,])
+               soc_list <-
+                  append(soc_list, unique(data5[data5$PT == n,]$SOC))
+            }
+            rownames(wald_table) <- unique(data5$PT)
+            wald_table1 <-
+               as.data.frame(wald_table) %>% mutate(cat = "Risk Ratio with 95% CI")
+            wald_table1$soc <- soc_list
+            wald_table1[is.na(wald_table1)] = 0
+            p_ci <-
+               ggplot(wald_table1, 
+                      aes(x = estimate,
+                          y = rownames(wald_table1),)) +
+               geom_point(
+                  size = 3, 
+                  position = position_jitter(h = 0.1, w = 0.1)) +
+               facet_grid(
+                  rows = vars(soc),
+                  cols = vars(cat),
+                  scales = "free",
+                  space = "free"
+               ) +
+               theme(legend.position = "bottom") +
+               theme(
+                  axis.text.y = element_blank(),
+                  axis.title.y = element_blank(),
+                  axis.title.x = element_blank()
+               ) +
+               theme(strip.text.y = element_text(angle = 90, size = 8)) +
+               geom_errorbarh(aes(xmin = lower, xmax = upper)) +
+               xlim(min = -1 * max(wald_table1$upper) - 1,
+                    max = max(wald_table1$upper) + 1) +
+               annotate("segment", x = 0, xend = 5, y = 0.5, yend = 0.5, size = 1, 
+                        colour = "red", arrow = arrow(type = "closed")) +
+               annotate("text", x = 3, xend = 5, y= 0.5, yend = 0.5, label = "More Risk", fontface = "bold") +
+               annotate("segment", x = 0, xend = -5, y = 0.5, yend = 0.5, size = 1, 
+                        colour = "green", arrow = arrow(type = "closed")) +
+               annotate("text", x = -3, xend = -5, y= 0.5, yend = 0.5, label = "Less Risk", fontface = "bold")
+            return(p_ci)
+            
+         }, )
+         
+         return(p)
+ 
+         # data <- info()
+         # data0 <- data %>%
+         #    mutate(duration = (as.numeric(
+         #       difftime(previous.dose.date, First.dose.date)) + 1 + 7) / 365.25) %>%
+         #    filter(Treatment %in% c(input$treatment_1, input$treatment_2))
+         # data1 <- data %>%
+         #    select(Subject.ID, Treatment, PT, Onset.Date, First.dose.date) %>%
+         #    filter(Treatment %in% c(input$treatment_1, input$treatment_2)) %>%
+         #    mutate(duration = (as.numeric(
+         #       difftime(Onset.Date, First.dose.date)
+         #    ) + 1) / 365.25)
+         # output$txt <- renderText({
+         #    calc <-
+         #       length(unique(data1$Subject.ID)) * 100 / (sum(data0$duration) + sum(data1$duration))
+         #    text <-
+         #       paste(
+         #          "The exposure-adjusted incidence rate estimates that if 100 patients were treated for 1 year, ",
+         #          calc,
+         #          " patients would experience the event of interest."
+         #       )
+         #    return(text)
+         # })
+         # return(data1)
          
       })
+#-------------------------------------------------------------------------------      
       output$crude_incidence <- renderPlot({
          df <- info()
          data1 <- df %>%
@@ -306,19 +451,9 @@ ctcae <-
                   axis.title.y = element_blank()) +
             theme(axis.title.x = element_blank())
          
-         
+#-------------------------------------------------------------------------------         
          output$crude_wald <- renderPlot({
             data5 <- data2
-            # df %>%
-            # select(Subject.ID, PT, Treatment) %>%
-            # group_by(Subject.ID, PT, Treatment) %>%
-            # distinct()
-            #data5 <- data5[data5$Treatment %in% c(input$treatment1, input$treatment2), ]
-            # for (x in 1:length(data5$PT)) {
-            #    if (data5$PT[x] != "headache") {
-            #       data5$PT[x] <- 0
-            #    }
-            # }
             # run through the AEs in treatment groups and return wald test with CI
             wald_table <- c()
             soc_list <- c()
@@ -329,6 +464,7 @@ ctcae <-
                      data6$PT[x] <- 0
                   }
                }
+               # https://sphweb.bumc.bu.edu/otlt/mph-modules/ph717-quantcore/r-for-ph717/R-for-PH71714.html
                wald_table <- 
                   rbind(wald_table,
                         riskratio.wald(table(
@@ -345,9 +481,12 @@ ctcae <-
             wald_table1$soc <- soc_list
             wald_table1[is.na(wald_table1)] = 0
             p_ci <-
-               ggplot(wald_table1, aes(x = estimate, y = rownames(wald_table1), )) +
-               geom_point(size = 3, position = position_jitter(h = 0.1, w =
-                                                                  0.1)) +
+               ggplot(wald_table1, 
+                      aes(x = estimate,
+                          y = rownames(wald_table1),)) +
+               geom_point(
+                  size = 3, 
+                  position = position_jitter(h = 0.1, w = 0.1)) +
                facet_grid(
                   rows = vars(soc),
                   cols = vars(cat),
@@ -362,10 +501,14 @@ ctcae <-
                ) +
                theme(strip.text.y = element_text(angle = 90, size = 8)) +
                geom_errorbarh(aes(xmin = lower, xmax = upper)) +
-               xlim(
-                  min = -1 * max(wald_table1$upper) - 1,
-                  max = max(wald_table1$upper) + 1
-               )
+               xlim(min = -1 * max(wald_table1$upper) - 1,
+                    max = max(wald_table1$upper) + 1) +
+               annotate("segment", x = 0, xend = 5, y = 0.5, yend = 0.5, size = 1, 
+                        colour = "red", arrow = arrow(type = "closed")) +
+               annotate("text", x = 3, xend = 5, y= 0.5, yend = 0.5, label = "More Risk", fontface = "bold") +
+               annotate("segment", x = 0, xend = -5, y = 0.5, yend = 0.5, size = 1, 
+                        colour = "green", arrow = arrow(type = "closed")) +
+               annotate("text", x = -3, xend = -5, y= 0.5, yend = 0.5, label = "Less Risk", fontface = "bold")
             return(p_ci)
             
          }, )
@@ -373,6 +516,7 @@ ctcae <-
          
          return(p)
       })
+      
    # output$summary_table <- render_gt({
    #   data <- info()
    #   data <- data %>% select(any_of(c("SOC", "PT", "Treatment")))
