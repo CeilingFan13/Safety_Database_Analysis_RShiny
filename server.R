@@ -65,19 +65,19 @@ ctcae <-
                            selected = site_list)
          updatePickerInput(session,
                            "treatment1",
-                           "Treatment Group 1",
+                           "Control Group",
                            choices = treatment_list)
          updatePickerInput(session,
                            "treatment2",
-                           "Treatment Group 2",
+                           "Treatment Group",
                            choices = treatment_list)
          updatePickerInput(session,
                            "treatment_1",
-                           "Treatment Group 1",
+                           "Control Group",
                            choices = treatment_list)
          updatePickerInput(session,
                            "treatment_2",
-                           "Treatment Group 2",
+                           "Treatment Group",
                            choices = treatment_list)
          
          updatePickerInput(
@@ -327,15 +327,21 @@ ctcae <-
                   if (data6$PT[x] != n) {
                      data6$PT[x] <- 0
                   }
+                  if (data6$Treatment[x] == input$treatment_1){
+                     data6$Treatment[x] <- 0
+                  }
+                  if (data6$Treatment[x] == input$treatment_2){
+                     data6$Treatment[x] <- 1
+                  }
+                 
                }
                # https://sphweb.bumc.bu.edu/otlt/mph-modules/ph717-quantcore/r-for-ph717/R-for-PH71714.html
                wald_table <- 
                   rbind(wald_table,
                         riskratio.wald(table(
                            data6$PT, 
-                           c(data6[data6$Treatment == input$treatment1,]$Treatment, 
-                             data6[data6$Treatment == input$treatment2,]$Treatment)
-                        ))$measure[2,])
+                           data6$Treatment)
+                        )$measure[2,])
                soc_list <-
                   append(soc_list, unique(data5[data5$PT == n,]$SOC))
             }
@@ -351,6 +357,12 @@ ctcae <-
                geom_point(
                   size = 3, 
                   position = position_jitter(h = 0.1, w = 0.1)) +
+               geom_text(data = wald_table1, 
+                         aes(label = round(estimate, digits = 2),
+                             group = x), 
+                         position = position_dodge(width = 0.8),
+                         vjust = -0.3, 
+                         hjust = -0.3) +
                facet_grid(
                   rows = vars(soc),
                   cols = vars(cat),
@@ -422,6 +434,10 @@ ctcae <-
          
          data2 <-
             data2[data2$Treatment %in% c(input$treatment1, input$treatment2),]
+         # group1 <- data0[data0$Treatment %in% input$treatment1, ]
+         # group2 <- data0[data0$Treatment %in% input$treatment2, ]
+         # data2 <- rbind(group1[group1$PT %in% group2$PT,], group2[group2$PT %in% group1$PT,])
+         
          # output$test_table <- renderTable({
          #    data3 <- data2 %>%
          #       select(- pct) %>%
@@ -457,11 +473,18 @@ ctcae <-
             # run through the AEs in treatment groups and return wald test with CI
             wald_table <- c()
             soc_list <- c()
+            # data5$Treatment <- as.character(data5$Treatment)
             for (n in unique(data5$PT)) {
                data6 <- data5
                for (x in 1:length(data6$PT)) {
                   if (data6$PT[x] != n) {
                      data6$PT[x] <- 0
+                  }
+                  if (data6$Treatment[x] == input$treatment1){
+                     data6$Treatment[x] <- 0
+                  }
+                  if (data6$Treatment[x] == input$treatment2){
+                     data6$Treatment[x] <- 1
                   }
                }
                # https://sphweb.bumc.bu.edu/otlt/mph-modules/ph717-quantcore/r-for-ph717/R-for-PH71714.html
@@ -469,13 +492,15 @@ ctcae <-
                   rbind(wald_table,
                         riskratio.wald(table(
                                       data6$PT, 
-                                      c(data6[data6$Treatment == input$treatment1,]$Treatment, 
-                                        data6[data6$Treatment == input$treatment2,]$Treatment)
+                                      data6$Treatment
                                    ))$measure[2,])
                soc_list <-
                   append(soc_list, unique(data5[data5$PT == n,]$SOC))
             }
             rownames(wald_table) <- unique(data5$PT)
+            output$crude_wald_table <- renderTable({
+               return(wald_table)
+            })
             wald_table1 <-
                as.data.frame(wald_table) %>% mutate(cat = "Risk Ratio with 95% CI")
             wald_table1$soc <- soc_list
@@ -487,6 +512,12 @@ ctcae <-
                geom_point(
                   size = 3, 
                   position = position_jitter(h = 0.1, w = 0.1)) +
+               geom_text(data = wald_table1, 
+                         aes(label = round(estimate, digits = 2),
+                             group = x), 
+                         position = position_dodge(width = 0.8),
+                         vjust = -0.3, 
+                         hjust = -0.3) +
                facet_grid(
                   rows = vars(soc),
                   cols = vars(cat),

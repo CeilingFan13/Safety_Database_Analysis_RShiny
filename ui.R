@@ -17,7 +17,7 @@ ui <- navbarPage(useShinyjs(),
                    # Sidebar with a slider input for number of bins
                    sidebarLayout(
                      sidebarPanel(id = "sidebar",
-                       width = 1,
+                       width = 2,
                        # select a file to be analyzed
                        fileInput(
                          inputId = "file1",
@@ -101,14 +101,14 @@ ui <- navbarPage(useShinyjs(),
                                                column(4,
                                                       pickerInput(
                                                         inputId = "treatment1",
-                                                        label = "Treatment Group 1",
+                                                        label = "Control Group",
                                                         choices = NULL,
                                                         multiple = FALSE
                                                       )),
                                                column(4,
                                                       pickerInput(
                                                         inputId = "treatment2",
-                                                        label = "Treatment Group 2",
+                                                        label = "Treatment Group",
                                                         choices = "",
                                                         multiple = FALSE
                                                       ))
@@ -116,6 +116,7 @@ ui <- navbarPage(useShinyjs(),
                                                ),
                                 column(5, plotOutput("crude_incidence", height = "790px")),
                                 column(7, plotOutput("crude_wald", height = "750px"))
+                                #column(2, tableOutput("crude_wald_table"))
                                 
                        ),
                        
@@ -141,8 +142,7 @@ ui <- navbarPage(useShinyjs(),
                      # ),
                      
                      tabPanel("Exposure-Adjusted Incidence Rate and Wald's CI", 
-                                fluidRow("Most appropriate when the hazard rate of the specific event is relatively constant over the duration of the study. Not approriate for events that usually occur early in the study."),
-                              fluidRow(
+                               fluidRow(
                                 # column(2, 
                                 #        pickerInput(
                                 #          inputId = "interest_ae",
@@ -152,13 +152,13 @@ ui <- navbarPage(useShinyjs(),
                                 column(4,
                                        pickerInput(
                                          inputId = "treatment_1",
-                                         label = "Treatment Group 1",
+                                         label = "Control Group",
                                          choices = NULL,
                                          multiple = FALSE
                                        )),
                                 column(4, pickerInput(
                                   inputId = "treatment_2",
-                                  label = "Treatment Group 2",
+                                  label = "Treatment Group",
                                   choices = NULL,
                                   multiple = FALSE
                                 )),
@@ -166,7 +166,9 @@ ui <- navbarPage(useShinyjs(),
                               ),
                               fluidRow(column(5, plotOutput("eair_incidence", height = "790px")), 
                                        column(7, plotOutput("eair_wald", height = "790px")),
-                                       textOutput("txt"))
+                                       textOutput("txt")),
+                              fluidRow("***Most appropriate when the hazard rate of the specific event is relatively constant over the duration of the study. Not approriate for events that usually occur early in the study."),
+                              
                               # fluidRow(
                               #   column(2, "Duration of Treatment (years) Median (outside of dummy data)"),
                               #   column(5, 
