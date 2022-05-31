@@ -71,14 +71,6 @@ ctcae <-
                            "treatment2",
                            "Treatment Group",
                            choices = treatment_list)
-         updatePickerInput(session,
-                           "treatment_1",
-                           "Control Group",
-                           choices = treatment_list)
-         updatePickerInput(session,
-                           "treatment_2",
-                           "Treatment Group",
-                           choices = treatment_list)
          
          updatePickerInput(
             session,
@@ -106,14 +98,7 @@ ctcae <-
             choices = sort(unique(subset(data1$Treatment, data1$Treatment != input$treatment1)))
          )
       })
-      observeEvent(input$treatment_1, {
-         data1 <- info()
-         updatePickerInput(
-            session = session,
-            inputId = "treatment_2",
-            choices = sort(unique(subset(data1$Treatment, data1$Treatment != input$treatment_1)))
-         )
-      })
+      
     
       # dropdown input from page "EAIR"
       # observeEvent(input$treatment1, {
@@ -269,7 +254,7 @@ ctcae <-
       output$eair_incidence <- renderPlot({
          df <- info()
          time <- df %>% 
-            filter(Treatment %in% c(input$treatment_1, input$treatment_2)) %>%
+            filter(Treatment %in% c(input$treatment1, input$treatment2)) %>%
             select(Subject.ID, Treatment, PT, Onset.Date, First.dose.date, previous.dose.date) %>%
             mutate(duration1 = as.numeric((difftime(Onset.Date, First.dose.date, units = "days")) + 1) / 365.25) %>%
             mutate(duration2 = as.numeric((difftime(previous.dose.date, First.dose.date, units = "days")) + 1 + input$effect_days) / 365.25) %>%
@@ -280,7 +265,7 @@ ctcae <-
             distinct() %>%
             group_by(SOC, PT, Treatment) %>%
             summarise(n = n(), .groups = "keep") %>%
-            filter(Treatment %in% c(input$treatment_1, input$treatment_2))
+            filter(Treatment %in% c(input$treatment1, input$treatment2))
          person_time <- c()
          for (i in 1:length(data1$PT)) {
             trt <- data1$Treatment[i]
@@ -327,10 +312,10 @@ ctcae <-
                   if (data6$PT[x] != n) {
                      data6$PT[x] <- 0
                   }
-                  if (data6$Treatment[x] == input$treatment_1){
+                  if (data6$Treatment[x] == input$treatment1){
                      data6$Treatment[x] <- 0
                   }
-                  if (data6$Treatment[x] == input$treatment_2){
+                  if (data6$Treatment[x] == input$treatment2){
                      data6$Treatment[x] <- 1
                   }
                  
@@ -355,8 +340,7 @@ ctcae <-
                       aes(x = estimate,
                           y = rownames(wald_table1),)) +
                geom_point(
-                  size = 3, 
-                  position = position_jitter(h = 0.1, w = 0.1)) +
+                  size = 3) +
                geom_text(data = wald_table1, 
                          aes(label = round(estimate, digits = 2),
                              group = x), 
@@ -473,6 +457,9 @@ ctcae <-
             # run through the AEs in treatment groups and return wald test with CI
             wald_table <- c()
             soc_list <- c()
+            p_fisher <- c()
+            pt_list <- c()
+            rr <- c()
             # data5$Treatment <- as.character(data5$Treatment)
             for (n in unique(data5$PT)) {
                data6 <- data5
@@ -488,15 +475,49 @@ ctcae <-
                   }
                }
                # https://sphweb.bumc.bu.edu/otlt/mph-modules/ph717-quantcore/r-for-ph717/R-for-PH71714.html
+               rev_con <- table(data6$PT,
+                                data6$Treatment)
                wald_table <- 
                   rbind(wald_table,
-                        riskratio.wald(table(
-                                      data6$PT, 
-                                      data6$Treatment
-                                   ))$measure[2,])
+                        riskratio.wald(rev_con)$measure[2,])
                soc_list <-
                   append(soc_list, unique(data5[data5$PT == n,]$SOC))
+               # calculate p value for each AE between groups
+               con_table <- table(data6$Treatment,data6$PT)
+               p_fisher <- rbind(p_fisher, fisher.test(con_table)$p)
+               # calculate relative risk
+               if (rev_con[,1][2] / sum(rev_con[,1]) == 0 || rev_con[,1][2] / sum(rev_con[,1]) == Inf) {
+                  relative_ratio <- round((rev_con[,2][2] / sum(rev_con[,2])) - (rev_con[,1][2] / sum(rev_con[,1])), digit=2)
+               }
+               else {
+                  relative_ratio <- round((rev_con[,2][2] / sum(rev_con[,2])) / (rev_con[,1][2] / sum(rev_con[,1])), digit=2)
+               }
+               rr <- append(rr, relative_ratio)
+               pt_list <- append(pt_list, n)
             }
+            output$volcano <- renderPlot({
+               rr <- as.data.frame(rr)
+               rr <- cbind(pt_list, rr)
+               colnames(rr) <- c("pt", "rr")
+               rr <- mutate(rr, group = "rr",.keep = "all" )
+               vol <- cbind(rr, p_fisher)
+               vol <- cbind(vol, soc_list)
+               
+               volc <- ggplot(data = vol, aes(x = rr, y = -log10(p_fisher), color = factor(soc_list))) +
+                  geom_point(size = 2, position = position_jitter(h = 0.2, w = 0.2, seed = 1)) +
+                  theme(legend.position = "bottom") +
+                  geom_label(aes(label = pt, fill = factor(soc_list)), color = "white", position = position_jitter(h = 0.2, w = 0.2, seed = 1), size = 4) +
+                  geom_hline(yintercept=-log10(0.05), linetype="dashed", color = "red") +
+                  geom_vline(xintercept = 1, linetype="dotted",color = "blue") +
+                  annotate("segment", x = 1, xend = 2, y = 0, yend = 0, size = 0.5, 
+                           colour = "blue", arrow = arrow(type = "closed")) +
+                  annotate("text", x = 1.5, y= 0.01, label = "Treatment Group", fontface = "bold") +
+                  annotate("segment", x = 1, xend = 0, y = 0, yend = 0, size = 0.5, 
+                           colour = "green", arrow = arrow(type = "closed")) +
+                  annotate("text", x = 0.5, y= 0.01,  label = "Control Group", fontface = "bold") +
+                  xlim(min = -1 * max(vol$rr), max = max(vol$rr) + 2)
+               return(volc)
+            })
             rownames(wald_table) <- unique(data5$PT)
             output$crude_wald_table <- renderTable({
                return(wald_table)
@@ -510,8 +531,7 @@ ctcae <-
                       aes(x = estimate,
                           y = rownames(wald_table1),)) +
                geom_point(
-                  size = 3, 
-                  position = position_jitter(h = 0.1, w = 0.1)) +
+                  size = 3) +
                geom_text(data = wald_table1, 
                          aes(label = round(estimate, digits = 2),
                              group = x), 
