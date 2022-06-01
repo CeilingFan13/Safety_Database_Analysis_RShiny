@@ -215,7 +215,7 @@ ui <- navbarPage(
   tabPanel(
     title = "Statistical Visualization",
     fluidRow(column(
-      6,
+      5,
       pickerInput(
         inputId = "treatment1",
         label = "Control Group",
@@ -224,13 +224,17 @@ ui <- navbarPage(
       )
     ),
     column(
-      6,
+      5,
       pickerInput(
         inputId = "treatment2",
         label = "Treatment Group",
         choices = "",
         multiple = FALSE
       )
+    ),
+    column(
+      2,
+      actionButton("confirm", "Update")
     )),
     tabsetPanel(
       tabPanel(

@@ -88,6 +88,25 @@ ctcae <-
          )
          return(df)
       })
+      filtered <- eventReactive (input$confirm, {
+         df <- info()
+         data1 <- df %>%
+            select(Subject.ID, SOC, PT, Treatment) %>%
+            distinct() %>%
+            group_by(SOC, PT, Treatment) %>%
+            summarise(n = n(), .groups = "keep")
+         
+         data2 <-
+            data1 %>% mutate(pct = n * 100 / sum(as.numeric(data1$n))) %>%
+            mutate(var1 = paste(n, "(", 
+                                format(round(pct, digits = 2), 
+                                       nsmall = 2), ")")) %>%
+            mutate(cat = "Incidence Rate (%)")
+         
+         data2 <-
+            data2[data2$Treatment %in% c(input$treatment1, input$treatment2),]
+         return(data2)
+      })
       #-------------------------------------------------------------------------
       # reactive for treatment group 2 on tab that performs wald test
       observeEvent(input$treatment1, {
@@ -118,9 +137,6 @@ ctcae <-
       #       choices = unique(data[data$Treatment == input$treatment2, "PT"])
       #    )
       # }, ignoreInit = TRUE)
-      observeEvent(input$wald_type_test, {
-         
-      })
       #-------------------------------------------------------------------------
       output$contents <- DT::renderDataTable({
          data <- info()
@@ -251,6 +267,7 @@ ctcae <-
          data2 <- cbind(data2, soc_only[2])
          return(data2)
       })
+      
       output$eair_incidence <- renderPlot({
          df <- info()
          time <- df %>% 
@@ -401,38 +418,26 @@ ctcae <-
          
       })
 #-------------------------------------------------------------------------------      
+      
       output$crude_incidence <- renderPlot({
-         df <- info()
-         data1 <- df %>%
-            select(Subject.ID, SOC, PT, Treatment) %>%
-            distinct() %>%
-            group_by(SOC, PT, Treatment) %>%
-            summarise(n = n(), .groups = "keep")
-         
-         data2 <-
-            data1 %>% mutate(pct = n * 100 / sum(as.numeric(data1$n))) %>%
-            mutate(var1 = paste(n, "(", 
-                                format(round(pct, digits = 2), 
-                                       nsmall = 2), ")")) %>%
-            mutate(cat = "Incidence Rate (%)")
-         
-         data2 <-
-            data2[data2$Treatment %in% c(input$treatment1, input$treatment2),]
-         # group1 <- data0[data0$Treatment %in% input$treatment1, ]
-         # group2 <- data0[data0$Treatment %in% input$treatment2, ]
-         # data2 <- rbind(group1[group1$PT %in% group2$PT,], group2[group2$PT %in% group1$PT,])
-         
-         # output$test_table <- renderTable({
-         #    data3 <- data2 %>%
-         #       select(- pct) %>%
-         #       select(- n) %>%
-         #       select(- SOC) %>%
-         #       select(- cat) %>%
-         #       spread(Treatment, var1)
-         #    return(data3)
-         #})
-         
-         
+         # df <- info()
+         # data1 <- df %>%
+         #    select(Subject.ID, SOC, PT, Treatment) %>%
+         #    distinct() %>%
+         #    group_by(SOC, PT, Treatment) %>%
+         #    summarise(n = n(), .groups = "keep")
+         # 
+         # data2 <-
+         #    data1 %>% mutate(pct = n * 100 / sum(as.numeric(data1$n))) %>%
+         #    mutate(var1 = paste(n, "(", 
+         #                        format(round(pct, digits = 2), 
+         #                               nsmall = 2), ")")) %>%
+         #    mutate(cat = "Incidence Rate (%)")
+         # 
+         # data2 <-
+         #    data2[data2$Treatment %in% c(input$treatment1, input$treatment2),]
+         data2 <- filtered()
+      
          p <-
             ggplot(data2, aes(
                x = pct,
@@ -450,17 +455,18 @@ ctcae <-
             theme(strip.text.y = element_text(angle = 90, size = 8),
                   axis.title.y = element_blank()) +
             theme(axis.title.x = element_blank())
+         return(p)
+      })
          
 #-------------------------------------------------------------------------------         
          output$crude_wald <- renderPlot({
-            data5 <- data2
-            # run through the AEs in treatment groups and return wald test with CI
+            data5 <- filtered()
             wald_table <- c()
             soc_list <- c()
-            p_fisher <- c()
-            pt_list <- c()
-            rr <- c()
-            # data5$Treatment <- as.character(data5$Treatment)
+            #p_fisher <- c()
+            #pt_list <- c()
+            #rr <- c()
+            # run through the AEs in treatment groups and return wald test with CI
             for (n in unique(data5$PT)) {
                data6 <- data5
                for (x in 1:length(data6$PT)) {
@@ -483,45 +489,47 @@ ctcae <-
                soc_list <-
                   append(soc_list, unique(data5[data5$PT == n,]$SOC))
                # calculate p value for each AE between groups
-               con_table <- table(data6$Treatment,data6$PT)
-               p_fisher <- rbind(p_fisher, fisher.test(con_table)$p)
+               #con_table <- table(data6$Treatment,data6$PT)
+               #p_fisher <- rbind(p_fisher, fisher.test(con_table)$p)
                # calculate relative risk
-               if (rev_con[,1][2] / sum(rev_con[,1]) == 0 || rev_con[,1][2] / sum(rev_con[,1]) == Inf) {
+               #if (rev_con[,1][2] / sum(rev_con[,1]) == 0 || rev_con[,1][2] / sum(rev_con[,1]) == Inf) {
                   relative_ratio <- round((rev_con[,2][2] / sum(rev_con[,2])) - (rev_con[,1][2] / sum(rev_con[,1])), digit=2)
                }
-               else {
-                  relative_ratio <- round((rev_con[,2][2] / sum(rev_con[,2])) / (rev_con[,1][2] / sum(rev_con[,1])), digit=2)
-               }
-               rr <- append(rr, relative_ratio)
-               pt_list <- append(pt_list, n)
-            }
-            output$volcano <- renderPlot({
-               rr <- as.data.frame(rr)
-               rr <- cbind(pt_list, rr)
-               colnames(rr) <- c("pt", "rr")
-               rr <- mutate(rr, group = "rr",.keep = "all" )
-               vol <- cbind(rr, p_fisher)
-               vol <- cbind(vol, soc_list)
-               
-               volc <- ggplot(data = vol, aes(x = rr, y = -log10(p_fisher), color = factor(soc_list))) +
-                  geom_point(size = 2, position = position_jitter(h = 0.2, w = 0.2, seed = 1)) +
-                  theme(legend.position = "bottom") +
-                  geom_label(aes(label = pt, fill = factor(soc_list)), color = "white", position = position_jitter(h = 0.2, w = 0.2, seed = 1), size = 4) +
-                  geom_hline(yintercept=-log10(0.05), linetype="dashed", color = "red") +
-                  geom_vline(xintercept = 1, linetype="dotted",color = "blue") +
-                  annotate("segment", x = 1, xend = 2, y = 0, yend = 0, size = 0.5, 
-                           colour = "blue", arrow = arrow(type = "closed")) +
-                  annotate("text", x = 1.5, y= 0.01, label = "Treatment Group", fontface = "bold") +
-                  annotate("segment", x = 1, xend = 0, y = 0, yend = 0, size = 0.5, 
-                           colour = "green", arrow = arrow(type = "closed")) +
-                  annotate("text", x = 0.5, y= 0.01,  label = "Control Group", fontface = "bold") +
-                  xlim(min = -1 * max(vol$rr), max = max(vol$rr) + 2)
-               return(volc)
-            })
+               #else {
+               #    relative_ratio <- round((rev_con[,2][2] / sum(rev_con[,2])) / (rev_con[,1][2] / sum(rev_con[,1])), digit=2)
+               # }
+               # rr <- append(rr, relative_ratio)
+               # pt_list <- append(pt_list, n)
+            
+           
+            # output$volcano <- renderPlot({
+            #    rr <- as.data.frame(rr)
+            #    rr <- cbind(pt_list, rr)
+            #    colnames(rr) <- c("pt", "rr")
+            #    rr <- mutate(rr, group = "rr",.keep = "all" )
+            #    vol <- cbind(rr, p_fisher)
+            #    vol <- cbind(vol, soc_list)
+            #    
+            #    volc <- ggplot(data = vol, aes(x = rr, y = -log10(p_fisher), color = factor(soc_list))) +
+            #       geom_point(size = 2, position = position_jitter(h = 0.2, w = 0.2, seed = 1)) +
+            #       theme(legend.position = "bottom") +
+            #       geom_label(aes(label = pt, fill = factor(soc_list)), color = "white", position = position_jitter(h = 0.2, w = 0.2, seed = 1), size = 4) +
+            #       geom_hline(yintercept=-log10(0.05), linetype="dashed", color = "red") +
+            #       geom_vline(xintercept = 1, linetype="dotted",color = "blue") +
+            #       annotate("segment", x = 1, xend = 2, y = 0, yend = 0, size = 0.5, 
+            #                colour = "blue", arrow = arrow(type = "closed")) +
+            #       annotate("text", x = 1.5, y= 0.01, label = "Treatment Group", fontface = "bold") +
+            #       annotate("segment", x = 1, xend = 0, y = 0, yend = 0, size = 0.5, 
+            #                colour = "green", arrow = arrow(type = "closed")) +
+            #       annotate("text", x = 0.5, y= 0.01,  label = "Control Group", fontface = "bold") +
+            #       xlim(min = -1 * max(vol$rr), max = max(vol$rr) + 2)
+            #    return(volc)
+            # })
             rownames(wald_table) <- unique(data5$PT)
-            output$crude_wald_table <- renderTable({
-               return(wald_table)
-            })
+            
+            # output$crude_wald_table <- renderTable({
+            #    return(wald_table)
+            # })
             wald_table1 <-
                as.data.frame(wald_table) %>% mutate(cat = "Risk Ratio with 95% CI")
             wald_table1$soc <- soc_list
@@ -562,11 +570,69 @@ ctcae <-
                annotate("text", x = -3, xend = -5, y= 0.5, yend = 0.5, label = "Less Risk", fontface = "bold")
             return(p_ci)
             
-         }, )
+         })
+      
+      output$volcano <- renderPlot({
+         data5 <- filtered()
+         soc_list <- c()
+         p_fisher <- c()
+         pt_list <- c()
+         rr <- c()
+         # run through the AEs in treatment groups and return wald test with CI
+         for (n in unique(data5$PT)) {
+            data6 <- data5
+            for (x in 1:length(data6$PT)) {
+               if (data6$PT[x] != n) {
+                  data6$PT[x] <- 0
+               }
+               if (data6$Treatment[x] == input$treatment1){
+                  data6$Treatment[x] <- 0
+               }
+               if (data6$Treatment[x] == input$treatment2){
+                  data6$Treatment[x] <- 1
+               }
+            }
+            # https://sphweb.bumc.bu.edu/otlt/mph-modules/ph717-quantcore/r-for-ph717/R-for-PH71714.html
+            rev_con <- table(data6$PT,
+                             data6$Treatment)
+            soc_list <-
+               append(soc_list, unique(data5[data5$PT == n,]$SOC))
+            # calculate p value for each AE between groups
+            con_table <- table(data6$Treatment,data6$PT)
+            p_fisher <- rbind(p_fisher, fisher.test(con_table)$p)
+            # calculate relative risk
+            if (rev_con[,1][2] / sum(rev_con[,1]) == 0 || rev_con[,1][2] / sum(rev_con[,1]) == Inf) {
+               relative_ratio <- round((rev_con[,2][2] / sum(rev_con[,2])) - (rev_con[,1][2] / sum(rev_con[,1])), digit=2)
+            }
+            else {
+               relative_ratio <- round((rev_con[,2][2] / sum(rev_con[,2])) / (rev_con[,1][2] / sum(rev_con[,1])), digit=2)
+            }
+            rr <- append(rr, relative_ratio)
+            pt_list <- append(pt_list, n)
+         }
+         rr <- as.data.frame(rr)
+         rr <- cbind(pt_list, rr)
+         colnames(rr) <- c("pt", "rr")
+         rr <- mutate(rr, group = "rr",.keep = "all" )
+         vol <- cbind(rr, p_fisher)
+         vol <- cbind(vol, soc_list)
          
-         
-         return(p)
+         volc <- ggplot(data = vol, aes(x = rr, y = -log10(p_fisher), color = factor(soc_list))) +
+            geom_point(size = 2, position = position_jitter(h = 0.2, w = 0.2, seed = 1)) +
+            theme(legend.position = "bottom") +
+            geom_label(aes(label = pt, fill = factor(soc_list)), color = "white", position = position_jitter(h = 0.2, w = 0.2, seed = 1), size = 4) +
+            geom_hline(yintercept=-log10(0.05), linetype="dashed", color = "red") +
+            geom_vline(xintercept = 1, linetype="dotted",color = "blue") +
+            annotate("segment", x = 1, xend = 2, y = 0, yend = 0, size = 0.5, 
+                     colour = "blue", arrow = arrow(type = "closed")) +
+            annotate("text", x = 1.5, y= 0.01, label = "Treatment Group", fontface = "bold") +
+            annotate("segment", x = 1, xend = 0, y = 0, yend = 0, size = 0.5, 
+                     colour = "green", arrow = arrow(type = "closed")) +
+            annotate("text", x = 0.5, y= 0.01,  label = "Control Group", fontface = "bold") +
+            xlim(min = -1 * max(vol$rr), max = max(vol$rr) + 2)
+         return(volc)
       })
+         
       
    # output$summary_table <- render_gt({
    #   data <- info()
