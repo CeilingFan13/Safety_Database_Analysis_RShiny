@@ -211,11 +211,11 @@ ui <- navbarPage(
                
              )
            )),
-  # Second page
+  # Second navbar page
   tabPanel(
     title = "Statistical Visualization",
     fluidRow(column(
-      5,
+      4,
       pickerInput(
         inputId = "treatment1",
         label = "Control Group",
@@ -224,7 +224,7 @@ ui <- navbarPage(
       )
     ),
     column(
-      5,
+      4,
       pickerInput(
         inputId = "treatment2",
         label = "Treatment Group",
@@ -235,6 +235,10 @@ ui <- navbarPage(
     column(
       2,
       actionButton("confirm", "Update")
+    ),
+    column(
+      2, 
+      actionButton("report", "Generate Report")
     )),
     tabsetPanel(
       tabPanel(

@@ -15,6 +15,7 @@ library(heatmaply)
 library(epitools)
 library(lubridate)
 library(grid)
+library(shinyscreenshot)
 
 ctcae <-
    server <- function(input, output, session) {
@@ -117,7 +118,9 @@ ctcae <-
             choices = sort(unique(subset(data1$Treatment, data1$Treatment != input$treatment1)))
          )
       })
-      
+      observeEvent(input$report, {
+         screenshot()
+      })
     
       # dropdown input from page "EAIR"
       # observeEvent(input$treatment1, {
@@ -632,6 +635,7 @@ ctcae <-
             xlim(min = -1 * max(vol$rr), max = max(vol$rr) + 2)
          return(volc)
       })
+
          
       
    # output$summary_table <- render_gt({
