@@ -91,6 +91,7 @@ ctcae <-
          )
          return(df)
       })
+      # data for incidence plot
       filtered <- eventReactive (input$confirm, {
          df <- info()
          data1 <- df %>%
@@ -108,6 +109,18 @@ ctcae <-
          
          data2 <-
             data2[data2$Treatment %in% c(input$treatment1, input$treatment2),]
+         return(data2)
+      })
+      # data for crude wald and volcano plot
+      less_filtered <- eventReactive (input$confirm, {
+         df <- info()
+         data1 <- df %>%
+            select(Subject.ID, SOC, PT, Treatment) %>%
+            group_by(SOC, PT, Treatment)
+         
+         
+         data2 <-
+            data1[data1$Treatment %in% c(input$treatment1, input$treatment2),]
          return(data2)
       })
       inputgroup <- eventReactive(input$confirm, {
@@ -273,7 +286,9 @@ ctcae <-
          clean_ae <- rbind(tt, clean_ae)
          #clean_ae <- clean_ae[order(clean_ae$txt), ]
          k_table <-
-            clean_ae %>% knitr::kable("html", caption = "<center>Adverse Event Summary</center>") %>% kable_styling("striped", full_width = F)
+            clean_ae %>% 
+            knitr::kable("html", caption = "<center>Adverse Event Summary</center>") %>% 
+            kable_styling("striped", full_width = F)
          return(k_table)
       }
       
@@ -410,17 +425,31 @@ ctcae <-
                   }
                  
                }
+               one <- sum(subset(data6, data6$PT == 0 & data6$Treatment == 0)[5])
+               two <- sum(subset(data6, data6$PT == 0 & data6$Treatment == 1)[5])
+               if (is.na(as.numeric(subset(data6, data6$PT != 0 & data6$Treatment == 0)[5]))){
+                  three <- 0
+               }
+               else {
+                  three <- as.numeric(subset(data6, data6$PT != 0 & data6$Treatment == 0)[5])
+               }
+               if (is.na(as.numeric(subset(data6, data6$PT != 0 & data6$Treatment == 1)[5]))){
+                  four <- 0
+               }
+               else {
+                  four <- as.numeric(subset(data6, data6$PT != 0 & data6$Treatment == 1)[5])
+               }
                # https://sphweb.bumc.bu.edu/otlt/mph-modules/ph717-quantcore/r-for-ph717/R-for-PH71714.html
+               rbl <- matrix(
+                  c(one, two, three, four), ncol = 2, byrow=TRUE)
+               print(rbl)
                wald_table <- 
                   rbind(wald_table,
-                        riskratio.wald(table(
-                           data6$PT, 
-                           data6$Treatment)
-                        )$measure[2,])
+                        riskratio.wald(rbl)$measure[2,])
                soc_list <-
                   append(soc_list, unique(data5[data5$PT == n,]$SOC))
             }
-            rownames(wald_table) <- unique(data5$PT)
+            rownames(wald_table) <- unique(data2$PT)
             wald_table1 <-
                as.data.frame(wald_table) %>% mutate(cat = "Risk Ratio with 95% CI")
             wald_table1$soc <- soc_list
@@ -453,12 +482,15 @@ ctcae <-
                geom_errorbarh(aes(xmin = lower, xmax = upper)) +
                xlim(min = -1 * max(wald_table1$upper) - 1,
                     max = max(wald_table1$upper) + 1) +
-               annotate("segment", x = 0, xend = 5, y = 0.5, yend = 0.5, size = 1, 
-                        colour = "red", arrow = arrow(type = "closed")) +
-               annotate("text", x = 3, xend = 5, y= 0.5, yend = 0.5, label = "More Risk", fontface = "bold") +
-               annotate("segment", x = 0, xend = -5, y = 0.5, yend = 0.5, size = 1, 
-                        colour = "green", arrow = arrow(type = "closed")) +
-               annotate("text", x = -3, xend = -5, y= 0.5, yend = 0.5, label = "Less Risk", fontface = "bold")
+               # annotate("segment", x = 0, xend = 5, y = 0.5, yend = 0.5, size = 1, 
+               #          colour = "red", arrow = arrow(type = "closed")) +
+               annotate("text", x = 3, xend = 5, y= 0.5, yend = 0.5, label = "More Risk", fontface = "bold", colour = "red") +
+               # annotate("segment", x = 0, xend = -5, y = 0.5, yend = 0.5, size = 1, 
+               #          colour = "green", arrow = arrow(type = "closed")) +
+               annotate("text", x = -3, xend = -5, y= 0.5, yend = 0.5, label = "Less Risk", fontface = "bold", colour = "green") +
+               geom_vline(xintercept = 0,
+                          linetype = 2,
+                          color = "blue")
             return(p_ci)
             
          }, )
@@ -533,7 +565,7 @@ ctcae <-
          
 #-------------------------------------------------------------------------------         
          output$crude_wald <- renderPlot({
-            data5 <- filtered()
+            data5 <- less_filtered()
             wald_table <- c()
             soc_list <- c()
             #p_fisher <- c()
@@ -635,23 +667,25 @@ ctcae <-
                geom_errorbarh(aes(xmin = lower, xmax = upper)) +
                xlim(min = -1 * max(wald_table1$upper) - 1,
                     max = max(wald_table1$upper) + 1) +
-               annotate("segment", x = 0, xend = 5, y = 0.5, yend = 0.5, size = 1, 
-                        colour = "red", arrow = arrow(type = "closed")) +
-               annotate("text", x = 3, xend = 5, y= 0.5, yend = 0.5, label = "More Risk", fontface = "bold") +
-               annotate("segment", x = 0, xend = -5, y = 0.5, yend = 0.5, size = 1, 
-                        colour = "green", arrow = arrow(type = "closed")) +
-               annotate("text", x = -3, xend = -5, y= 0.5, yend = 0.5, label = "Less Risk", fontface = "bold")
+               # annotate("segment", x = 0, xend = 5, y = 0.5, yend = 0.5, size = 1, 
+               #          colour = "red", arrow = arrow(type = "closed")) +
+               annotate("text", x = 3, xend = 5, y= 0.5, yend = 0.5, label = "More Risk", fontface = "bold", colour = "red") +
+               # annotate("segment", x = 0, xend = -5, y = 0.5, yend = 0.5, size = 1, 
+               #          colour = "green", arrow = arrow(type = "closed")) +
+               annotate("text", x = -3, xend = -5, y= 0.5, yend = 0.5, label = "Less Risk", fontface = "bold", colour = "green") +
+               geom_vline(xintercept = 0,
+                          linetype = 2,
+                          color = "blue")
             return(p_ci)
             
          })
       
       output$volcano <- renderPlot({
-         data5 <- filtered()
+         data5 <- less_filtered()
          soc_list <- c()
          p_fisher <- c()
          pt_list <- c()
          rr <- c()
-         # run through the AEs in treatment groups and return wald test with CI
          for (n in unique(data5$PT)) {
             data6 <- data5
             for (x in 1:length(data6$PT)) {
@@ -674,8 +708,15 @@ ctcae <-
             con_table <- table(data6$Treatment,data6$PT)
             p_fisher <- rbind(p_fisher, fisher.test(con_table)$p)
             # calculate relative risk
-            if (rev_con[,1][2] / sum(rev_con[,1]) == 0 || rev_con[,1][2] / sum(rev_con[,1]) == Inf) {
-               relative_ratio <- round((rev_con[,2][2] / sum(rev_con[,2])) - (rev_con[,1][2] / sum(rev_con[,1])), digit=2)
+            # if (rev_con[,1][2] / sum(rev_con[,1]) == 0 || rev_con[,1][2] / sum(rev_con[,1]) == Inf) {
+            #    relative_ratio <- round(((rev_con[,2][2] + 1) / (sum(rev_con[,2]) + 1 )), digit=2)
+            #                            #- (rev_con[,1][2] / sum(rev_con[,1])), digit=2)
+            # }
+            if(sum(rev_con[,1]) == 0) {
+               relative_ratio <- round((rev_con[,2][2] / sum(rev_con[,2])) / (rev_con[,1][2] / (sum(rev_con[,1]) + 0.5)), digit=2)
+            }
+            else if(rev_con[,1][2] == 0) {
+               relative_ratio <- round((rev_con[,2][2] / sum(rev_con[,2])) / ((rev_con[,1][2] + 0.5) / sum(rev_con[,1])), digit=2)
             }
             else {
                relative_ratio <- round((rev_con[,2][2] / sum(rev_con[,2])) / (rev_con[,1][2] / sum(rev_con[,1])), digit=2)
@@ -690,19 +731,19 @@ ctcae <-
          vol <- cbind(rr, p_fisher)
          vol <- cbind(vol, soc_list)
          
-         volc <- ggplot(data = vol, aes(x = rr, y = -log10(p_fisher), color = factor(soc_list))) +
+         volc <- ggplot(data = vol, aes(x = log2(rr), y = -log10(p_fisher), color = factor(soc_list))) +
             geom_point(size = 2, position = position_jitter(h = 0.2, w = 0.2, seed = 1)) +
             theme(legend.position = "bottom") +
             geom_label(aes(label = pt, fill = factor(soc_list)), color = "white", position = position_jitter(h = 0.2, w = 0.2, seed = 1), size = 4) +
             geom_hline(yintercept=-log10(0.05), linetype="dashed", color = "red") +
-            geom_vline(xintercept = 1, linetype="dotted",color = "blue") +
-            annotate("segment", x = 1, xend = 2, y = 0, yend = 0, size = 0.5, 
+            geom_vline(xintercept = 0, linetype="dotted",color = "blue") +
+            annotate("segment", x = 0, xend = max(vol$rr), y = 0, yend = 0, size = 0.5, 
                      colour = "blue", arrow = arrow(type = "closed")) +
-            annotate("text", x = 1.5, y= 0.01, label = "Treatment Group", fontface = "bold") +
-            annotate("segment", x = 1, xend = 0, y = 0, yend = 0, size = 0.5, 
+            annotate("text", x = max(vol$rr)/2, y= 0.01, label = "Treatment Group", fontface = "bold") +
+            annotate("segment", x = 0, xend = -1 * max(vol$rr), y = 0, yend = 0, size = 0.5, 
                      colour = "green", arrow = arrow(type = "closed")) +
-            annotate("text", x = 0.5, y= 0.01,  label = "Control Group", fontface = "bold") +
-            xlim(min = -1 * max(vol$rr), max = max(vol$rr) + 2)
+            annotate("text", x = -1 * max(vol$rr)/2, y= 0.01,  label = "Control Group", fontface = "bold") +
+            xlim(min = -1 * max(vol$rr) - 1, max = max(vol$rr) + 1)
          return(volc)
       })
 

@@ -116,7 +116,7 @@ ui <- navbarPage(
                    DT::dataTableOutput("contents")
                  ),
                  tabPanel("Summary Table", tableOutput("summary_table")),
-                 # tabPanel("Crude Incidence Rate and Wald's CI",
+                 # tabPanel("Crude Incidence Rate and Risk Ratio Estimation",
                  #          fluidRow(
                  #                         column(4,
                  #                                pickerInput(
@@ -229,7 +229,7 @@ ui <- navbarPage(
   tabPanel(
     title = "Statistical Visualization",
     fluidRow(column(
-      4,
+      3,
       pickerInput(
         inputId = "treatment1",
         label = "Control Group",
@@ -238,12 +238,22 @@ ui <- navbarPage(
       )
     ),
     column(
-      4,
+      3,
       pickerInput(
         inputId = "treatment2",
         label = "Treatment Group",
         choices = "",
         multiple = FALSE
+      )
+    ),
+    column(
+      2,
+      numericInput(
+        inputId = "effect_days",
+        label = "Duration of Drug Action (days)",
+        value = 0,
+        min = 0,
+        max = 1000
       )
     ),
     column(
@@ -256,7 +266,7 @@ ui <- navbarPage(
     )),
     tabsetPanel(
       tabPanel(
-        "Crude Incidence Rate and Wald's CI",
+        "Crude Incidence Rate and Risk Ratio Estimation",
         fluidRow(column(
           5, plotOutput("crude_incidence", height = "760px")
         ),
@@ -267,17 +277,17 @@ ui <- navbarPage(
       tabPanel("Fisher Exact vs. Relative Risk",
                fluidRow(plotOutput("volcano", height = "720px"))),
       tabPanel(
-        "Exposure-Adjusted Incidence Rate and Wald's CI",
-        fluidRow(column(
-          4,
-          numericInput(
-            inputId = "effect_days",
-            label = "Duration of Drug Action (days)",
-            value = 0,
-            min = 0,
-            max = 1000
-          )
-        )),
+        "Exposure-Adjusted Incidence Rate and Risk Ratio Estimation",
+        # fluidRow(column(
+        #   4,
+        #   numericInput(
+        #     inputId = "effect_days",
+        #     label = "Duration of Drug Action (days)",
+        #     value = 0,
+        #     min = 0,
+        #     max = 1000
+        #   )
+        # )),
         fluidRow(
           column(5, plotOutput("eair_incidence", height = "760px")),
           column(7, plotOutput("eair_wald", height = "720px")),
