@@ -215,7 +215,7 @@ ui <- navbarPage(
                    column(6, plotOutput("heatmap", height = "700px")),
                    column(6, plotOutput("soc_bar", height = "700px"))),
                    fluidRow(
-                     column(12, tableOutput("soc_tr")))
+                     column(12, DT::dataTableOutput("soc_tr")))
                      #column(6, plotOutput("pie_soc")))
                    
                    

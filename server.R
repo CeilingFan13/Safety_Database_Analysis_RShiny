@@ -318,7 +318,7 @@ ctcae <-
          return(h_map)
       })
       
-      output$soc_tr <- renderTable({
+      output$soc_tr <- DT::renderDataTable({
          data0 <- info()
          data <- data0 %>% select(c("SOC", "Treatment")) %>%
             group_by(SOC, Treatment) %>%
