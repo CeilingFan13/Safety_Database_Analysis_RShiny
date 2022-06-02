@@ -13,7 +13,6 @@ ui <- navbarPage(
   title = "Safety Database",
   # create summary page for CSV upload and display
   tabPanel(title = "Summary",
-           
            # Sidebar with a slider input for number of bins
            sidebarLayout(
              sidebarPanel(
@@ -86,8 +85,8 @@ ui <- navbarPage(
                      column(
                        3,
                        pickerInput(
-                         inputId = "preferred_term",
-                         label = "Preferred Term",
+                         inputId = "organ_class",
+                         label = "System Organ Class",
                          choices = NULL,
                          multiple = TRUE,
                          options = list("actions-box" = TRUE)
@@ -96,13 +95,23 @@ ui <- navbarPage(
                      column(
                        3,
                        pickerInput(
-                         inputId = "organ_class",
-                         label = "System Organ Class",
+                         inputId = "preferred_term",
+                         label = "Preferred Term",
                          choices = NULL,
                          multiple = TRUE,
                          options = list("actions-box" = TRUE)
                        )
                      )
+                     # column(
+                     #   3,
+                     #   pickerInput(
+                     #     inputId = "organ_class",
+                     #     label = "System Organ Class",
+                     #     choices = NULL,
+                     #     multiple = TRUE,
+                     #     options = list("actions-box" = TRUE)
+                     #   )
+                     # )
                    ),
                    DT::dataTableOutput("contents")
                  ),
@@ -201,10 +210,15 @@ ui <- navbarPage(
                  #          fluidRow(plotOutput("volcano"))),
                  tabPanel(
                    "SOC vs. Treatment",
-                   fluidRow(column(6, plotOutput("heatmap")),
-                            column(6, plotOutput("pie_soc"))),
-                   hr(),
-                   fluidRow(tableOutput("soc_tr"))
+                   fluidRow(
+                     #column(7, tableOutput("soc_tr")),
+                   column(6, plotOutput("heatmap", height = "700px")),
+                   column(6, plotOutput("soc_bar", height = "700px"))),
+                   fluidRow(
+                     column(12, tableOutput("soc_tr")))
+                     #column(6, plotOutput("pie_soc")))
+                   
+                   
                    
                  )
                )

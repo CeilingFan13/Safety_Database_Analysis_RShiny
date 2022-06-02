@@ -16,6 +16,8 @@ library(epitools)
 library(lubridate)
 library(grid)
 library(shinyscreenshot)
+library(reshape)
+library(plotly)
 
 ctcae <-
    server <- function(input, output, session) {
@@ -62,7 +64,7 @@ ctcae <-
          updatePickerInput(session,
                            "site",
                            "Site",
-                           choices = site_list,
+                           choices = sort(site_list),
                            selected = site_list)
          updatePickerInput(session,
                            "treatment1",
@@ -108,6 +110,12 @@ ctcae <-
             data2[data2$Treatment %in% c(input$treatment1, input$treatment2),]
          return(data2)
       })
+      inputgroup <- eventReactive(input$confirm, {
+         df <- info()
+         time <- df %>% 
+            filter(Treatment %in% c(input$treatment1, input$treatment2))
+         return(time)
+      })
       #-------------------------------------------------------------------------
       # reactive for treatment group 2 on tab that performs wald test
       observeEvent(input$treatment1, {
@@ -118,6 +126,44 @@ ctcae <-
             choices = sort(unique(subset(data1$Treatment, data1$Treatment != input$treatment1)))
          )
       })
+      observeEvent(
+         {input$site}, {
+         data1 <- info()
+         a <- filter(data1, data1$Site %in% input$site
+                     )
+         #site_item <- sort(unique(a$Site))
+         subject_item <- sort(unique(a$Subject.ID))
+         soc_item <- sort(unique(a$SOC))
+         pt_item <- sort(unique(a$PT))
+
+         # updatePickerInput(
+         #    session = session,
+         #    inputId = "site",
+         #    choices = site_item,
+         #    selected = site_item
+         # )
+         updatePickerInput(
+            session = session,
+            inputId = "subject",
+            choices = subject_item,
+            selected = subject_item
+         )
+         updatePickerInput(
+            session = session,
+            inputId = "organ_class",
+            choices = soc_item,
+            selected = soc_item
+
+         )
+         updatePickerInput(
+            session = session,
+            inputId = "preferred_term",
+            choices = pt_item,
+            selected = pt_item
+
+         )
+      })
+     
       observeEvent(input$report, {
          screenshot()
       })
@@ -237,16 +283,41 @@ ctcae <-
             group_by(SOC, Treatment) %>%
             summarise(n = n(), .groups = "keep")
          
-         data2 <-
-            data %>% mutate(pct = n * 100 / sum(as.numeric(data$n))) %>% select(-pct) %>% spread(Treatment, n)
+         data1 <-data %>% mutate(pct = n * 100 / sum(as.numeric(data$n))) 
+         data2 <- data1 %>% select(-pct) %>% spread(Treatment, n)
          rownames(data2) <- data2$SOC
          data2 <- subset(data2, select = -c(SOC))
          data2[is.na(data2)] = 0
          m <- as.matrix(sapply(data2, as.numeric))
-         rownames(m) <- unique(data$SOC)
-         h_map <- heatmap(m)
+         soc <- unique(data$SOC)
+         rownames(m) <- soc
+         #my_colors <- colorRampPalette(c("cyan", "deeppink3"))
+         #h_map <- heatmap(m, Rowv = NA, col = my_colors(100))
+         m <- as.data.frame(m)
+         m <- cbind(m, soc)
+         m_reshape <- melt(m)
+         h_map <- ggplot(m_reshape, aes(variable, soc)) + 
+            geom_tile(aes(fill = value)) + 
+            scale_fill_gradient(low = "cyan", high = "blue") +
+            theme(legend.position = "bottom", 
+                  axis.title.x = element_blank(), 
+                  axis.title.y = element_blank(),
+                  axis.text.y = element_text(angle = 60)) +
+            coord_fixed()
+         
+         output$soc_bar <- renderPlot({
+            m_filter <- filter(m_reshape, m_reshape$value != 0)
+            bar_soc <- ggplot(m_filter, aes(variable, value, fill = soc)) + 
+               geom_bar(position = "dodge", stat = "identity") +
+               theme(legend.position = "bottom", 
+                     axis.title.x = element_blank()) 
+               
+            return(bar_soc)
+         })
+         
          return(h_map)
       })
+      
       output$soc_tr <- renderTable({
          data0 <- info()
          data <- data0 %>% select(c("SOC", "Treatment")) %>%
@@ -269,12 +340,11 @@ ctcae <-
             select(-c(total, pct))
          data2 <- cbind(data2, soc_only[2])
          return(data2)
-      })
+      }, width = "100%")
       
       output$eair_incidence <- renderPlot({
-         df <- info()
+         df <- inputgroup()
          time <- df %>% 
-            filter(Treatment %in% c(input$treatment1, input$treatment2)) %>%
             select(Subject.ID, Treatment, PT, Onset.Date, First.dose.date, previous.dose.date) %>%
             mutate(duration1 = as.numeric((difftime(Onset.Date, First.dose.date, units = "days")) + 1) / 365.25) %>%
             mutate(duration2 = as.numeric((difftime(previous.dose.date, First.dose.date, units = "days")) + 1 + input$effect_days) / 365.25) %>%
@@ -284,8 +354,8 @@ ctcae <-
             select(Subject.ID, SOC, PT, Treatment) %>%
             distinct() %>%
             group_by(SOC, PT, Treatment) %>%
-            summarise(n = n(), .groups = "keep") %>%
-            filter(Treatment %in% c(input$treatment1, input$treatment2))
+            summarise(n = n(), .groups = "keep")
+            #filter(Treatment %in% c(input$treatment1, input$treatment2))
          person_time <- c()
          for (i in 1:length(data1$PT)) {
             trt <- data1$Treatment[i]
