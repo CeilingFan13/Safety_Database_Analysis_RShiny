@@ -7,6 +7,7 @@ library(knitr)
 library(gt)
 library(gtsummary)
 library(dplyr)
+library(shinycustomloader)
 
 ui <- navbarPage(
   useShinyjs(),
@@ -301,6 +302,58 @@ ui <- navbarPage(
     )
     
     
-  )
+  ),
+  tabPanel(title = "Bayesian Meta-Analysis",
+           fluidRow(
+             column(3, fileInput(
+             inputId = "file2",
+             label = "Upload",
+             multiple = FALSE,
+             accept = c("text/csv", ".csv")
+           )),
+           
+           column(2, numericInput(inputId = "burnin", label = "Burnin", value = 50000)),
+           column(2, numericInput(inputId = "iteration", label = "Number of Iteration", value = 200000)),
+           column(2, numericInput(inputId = "chains", label = "Number of Chains", value = 3)),
+           column(1, numericInput(inputId = "alpha",
+                                  label = "Alpha",
+                                  value = 0.001)),
+           column(1, numericInput(inputId = "beta",
+                                  label = "Beta",
+                                  value = 0.001))
+           
+           ),
+           fluidRow(
+             column(2, pickerInput(inputId = "prior_type",
+                                   label = "Prior Distribution",
+                                   choices = c("Inverse-Gamma", 
+                                              "Uniform", 
+                                              "Half-Normal",
+                                              "Log-Normal"),
+                                   multiple = FALSE)),
+             column(4, pickerInput(inputId = "study_type",
+                                          label = "Type of Comparison",
+                                          choices = c("Pharmacological vs. placebo/control comparison",
+                                                      "Pharmacological vs. pharmacological comparison",
+                                                      "Non-pharmacological comparison"),
+                                          multiple = FALSE)),
+             column(2, pickerInput(inputId = "outcomes", 
+                                   label = "Outcomes",
+                                   choices = c("all-cause mortality",
+                                               "semi-objective outcome",
+                                               "subjective outcome"))),
+             column(2, actionButton("refresh", "Update"))
+             
+             
+           ),
+           
+           
+           fluidRow(withLoader(
+             DT::dataTableOutput("meta_table"), type="image", loader="loading-cat.gif"
+           )),
+           fluidRow(withLoader(
+             plotOutput("meta_trace"), type="text", loader=list(marquee("Building model"), marquee("Robot is doing math"))
+           ))
+           )
 )
 

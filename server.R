@@ -18,6 +18,10 @@ library(grid)
 library(shinyscreenshot)
 library(reshape)
 library(plotly)
+library("rjags")
+library("coda")
+library(shinycustomloader)
+source("Meta-Analysis.R")
 
 ctcae <-
    server <- function(input, output, session) {
@@ -199,6 +203,117 @@ ctcae <-
       #       choices = unique(data[data$Treatment == input$treatment2, "PT"])
       #    )
       # }, ignoreInit = TRUE)
+      
+      observeEvent({input$prior_type
+            input$study_type
+            input$outcomes}, {
+         if (input$prior_type != "Log-Normal") {
+            hide("study_type")
+            hide("outcomes")
+         }
+         
+         if (input$prior_type == "Inverse-Gamma") {
+            updateNumericInput(session = session,
+                               inputId = "alpha",
+                               value = 0.001)
+            updateNumericInput(session = session,
+                               inputId = "beta",
+                               value = 0.001)
+         }
+         else if (input$prior_type == "Uniform") {
+            updateNumericInput(session = session,
+                               inputId = "alpha",
+                               value = 0)
+            updateNumericInput(session = session,
+                               inputId = "beta",
+                               value = 2)
+         }
+         else if (input$prior_type == "Half-Normal") {
+            updateNumericInput(session = session,
+                               inputId = "alpha",
+                               value = 0)
+            updateNumericInput(session = session,
+                               inputId = "beta",
+                               value = 0.1)
+         }
+         else if (input$prior_type == "Log-Normal") {
+            shinyjs::show("study_type")
+            shinyjs::show("outcomes")
+            if(input$study_type == "Pharmacological vs. placebo/control comparison" & input$outcomes == "all-cause mortality") {
+               updateNumericInput(session = session,
+                                  inputId = "alpha",
+                                  value = -4.06)
+               updateNumericInput(session = session,
+                                  inputId = "beta",
+                                  value = 1.45)
+            }
+            if(input$study_type == "Pharmacological vs. placebo/control comparison" & input$outcomes == "semi-objective outcome") {
+               updateNumericInput(session = session,
+                                  inputId = "alpha",
+                                  value = -3.02)
+               updateNumericInput(session = session,
+                                  inputId = "beta",
+                                  value = 1.85)
+            }
+            if(input$study_type == "Pharmacological vs. placebo/control comparison" & input$outcomes == "subjective outcome") {
+               updateNumericInput(session = session,
+                                  inputId = "alpha",
+                                  value = -2.13)
+               updateNumericInput(session = session,
+                                  inputId = "beta",
+                                  value = 1.58)
+            }
+            if(input$study_type == "Pharmacological vs. pharmacological comparison" & input$outcomes == "all-cause mortality") {
+               updateNumericInput(session = session,
+                                  inputId = "alpha",
+                                  value = -4.27)
+               updateNumericInput(session = session,
+                                  inputId = "beta",
+                                  value = 1.48)
+            }
+            if(input$study_type == "Pharmacological vs. pharmacological comparison" & input$outcomes == "semi-objective outcome") {
+               updateNumericInput(session = session,
+                                  inputId = "alpha",
+                                  value = -3.23)
+               updateNumericInput(session = session,
+                                  inputId = "beta",
+                                  value = 1.88)
+            }
+            if(input$study_type == "Pharmacological vs. pharmacological comparison" & input$outcomes == "subjective outcome") {
+               updateNumericInput(session = session,
+                                  inputId = "alpha",
+                                  value = -2.34)
+               updateNumericInput(session = session,
+                                  inputId = "beta",
+                                  value = 1.62)
+            }
+            if(input$study_type == "Non-pharmacological comparison" & input$outcomes == "all-cause mortality") {
+               updateNumericInput(session = session,
+                                  inputId = "alpha",
+                                  value = -3.93)
+               updateNumericInput(session = session,
+                                  inputId = "beta",
+                                  value = 1.51)
+            }
+            if(input$study_type == "Non-pharmacological comparison" & input$outcomes == "semi-objective outcome") {
+               updateNumericInput(session = session,
+                                  inputId = "alpha",
+                                  value = -2.89)
+               updateNumericInput(session = session,
+                                  inputId = "beta",
+                                  value = 1.91)
+            }
+            if(input$study_type == "Non-pharmacological comparison" & input$outcomes == "subjective outcome") {
+               updateNumericInput(session = session,
+                                  inputId = "alpha",
+                                  value = -2.01)
+               updateNumericInput(session = session,
+                                  inputId = "beta",
+                                  value = 1.64)
+            }
+         }
+      })
+      
       #-------------------------------------------------------------------------
       output$contents <- DT::renderDataTable({
          data <- info()
@@ -746,7 +861,47 @@ ctcae <-
             xlim(min = -1 * max(vol$rr) - 1, max = max(vol$rr) + 1)
          return(volc)
       })
-
+      
+      
+      refresh <- eventReactive(input$refresh, {
+         df <- read.csv(
+            input$file2$datapath,
+            header = TRUE,
+            sep = ",",
+            blank.lines.skip = TRUE
+         )
+         data <- list(df$r1, df$r2, df$n1, df$n2)
+         names(data) <- c("r1", "r2", "n1", "n2")
+         prior_results(data = data, 
+                       prior = input$prior_type, 
+                       alpha = input$alpha, 
+                       beta = input$beta,
+                       n.burnin = input$burnin, 
+                       n.iter = input$iteration, 
+                       n.chains = input$chains) 
+         
+      })
+      
+      
+      
+      output$meta_table <- DT::renderDataTable({
+         
+         return(refresh()[[1]])
+         
+      })
+      
+      output$meta_trace <- renderPlot({
+         coda.ma <- refresh()[[2]]
+         par(mfcol = c(length(coda.ma), 1))
+         for(k in 1:length(coda.ma)){
+            temp <- as.vector(coda.ma[[k]][,"log_or"])
+            plot(temp, type = "l", col = "red", cex.lab = 1.5, cex.main = 1.5,
+                      xlab = "Iteration", ylab = "Log odds ratio",
+                      main = paste("Chain", k))
+         }
+         
+      })
+ 
          
       
    # output$summary_table <- render_gt({
