@@ -300,30 +300,37 @@ ui <- navbarPage(
         )
       )
     )
-    
-    
   ),
-  tabPanel(title = "Bayesian Meta-Analysis",
+  
+  tabPanel(title = "Univariate Bayesian Meta-Analysis of OR",
            fluidRow(
              column(3, fileInput(
-             inputId = "file2",
-             label = "Upload",
-             multiple = FALSE,
-             accept = c("text/csv", ".csv")
-           )),
-           
-           column(2, numericInput(inputId = "burnin", label = "Burnin", value = 50000)),
-           column(2, numericInput(inputId = "iteration", label = "Number of Iteration", value = 200000)),
-           column(2, numericInput(inputId = "chains", label = "Number of Chains", value = 3)),
-           column(1, numericInput(inputId = "alpha",
-                                  label = "Alpha",
-                                  value = 0.001)),
-           column(1, numericInput(inputId = "beta",
-                                  label = "Beta",
-                                  value = 0.001))
-           
+               inputId = "file2",
+               label = "Upload",
+               multiple = FALSE,
+               accept = c("text/csv", ".csv")
+             )),
+             
+             column(2, numericInput(inputId = "burnin", label = "Burnin", value = 50000)),
+             column(2, numericInput(inputId = "iteration", label = "Number of Iteration", value = 200000)),
+             column(2, numericInput(inputId = "chains", label = "Number of Chains", value = 3)),
+             column(1, numericInput(inputId = "alpha",
+                                    label = "Alpha",
+                                    value = 0.001)),
+             column(1, numericInput(inputId = "beta",
+                                    label = "Beta",
+                                    value = 0.001))
+             
            ),
-           fluidRow(
+           tabsetPanel(
+             tabPanel("Model Consideration", 
+                      withMathJax(),
+                      helpText("The theoretical formula behind this Bayesian model:"),
+                      uiOutput("equation"),
+                      hr(),
+                      fluidRow(grVizOutput("flowchart"))),
+             tabPanel("Check model convergence",
+                      fluidRow(
              column(2, pickerInput(inputId = "prior_type",
                                    label = "Prior Distribution",
                                    choices = c("Inverse-Gamma", 
@@ -342,18 +349,25 @@ ui <- navbarPage(
                                    choices = c("all-cause mortality",
                                                "semi-objective outcome",
                                                "subjective outcome"))),
+             column(2),
              column(2, actionButton("refresh", "Update"))
              
              
            ),
            
-           
            fluidRow(withLoader(
              DT::dataTableOutput("meta_table"), type="image", loader="loading-cat.gif"
            )),
-           fluidRow(withLoader(
-             plotOutput("meta_trace"), type="text", loader=list(marquee("Building model"), marquee("Robot is doing math"))
-           ))
+           hr(),
+           fluidRow(
+             column(6,
+             withLoader(
+             plotOutput("meta_trace"), type="text", loader=list(marquee("Traceplot on the way"))
+           )),
+           column(6, 
+                  withLoader(plotOutput("meta_den"), type = "text", loader = list(marquee("Density plot coming soon")))
+                  )
            )
+           )))
 )
 

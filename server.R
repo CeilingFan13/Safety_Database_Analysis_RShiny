@@ -21,6 +21,7 @@ library(plotly)
 library("rjags")
 library("coda")
 library(shinycustomloader)
+library(DiagrammeR)
 source("Meta-Analysis.R")
 
 ctcae <-
@@ -862,6 +863,46 @@ ctcae <-
          return(volc)
       })
       
+      output$flowchart <- renderGrViz({
+         flowchart <- grViz("digraph flowchart {
+      # node definitions with substituted label text
+      node [fontname = Helvetica, shape = rectangle, color = SteelBlue] 
+      edge [color = Gray, arrowhead = vee]
+      graph[layout = dot]
+      tab1 [label = '@@1']
+      tab2 [label = '@@2']
+      tab3 [label = '@@3']
+      tab4 [label = '@@4']
+      tab6 [label = '@@6']
+      tab9 [label = '@@9']
+      node [fontname = Helvetica, shape = oval, color = Firebrick]
+      tab5 [label = '@@5']
+      tab7 [label = '@@7']
+      tab8 [label = '@@8']
+      
+
+      # edge definitions with the node IDs
+      tab1 -> tab2 -> tab3 -> tab4 -> tab6 -> tab9;
+      tab4 -> tab5;
+      tab5 -> tab7 -> tab2 ;
+      tab5 -> tab8 -> tab1;
+      { rank=same; tab5 tab6;}
+      { rank=same; tab7 tab8;}
+      }
+
+      [1]: 'Specify priors for hyperparameters and input data'
+      [2]: 'Run burn-in period to draw posterior samples to \\n achieve the convergence and stablizationn of the Markov chains \\n (discarded before inference)'
+      [3]: 'Additional iterations to draw posterior'
+      [4]: 'Use trace plot and density plot to assess convergence'
+      [5]: 'Bad convergence'
+      [6]: 'Good convergence'
+      [7]: 'Increase iterations for burn-in'
+      [8]: 'Use informative priors'
+      [9]: 'Obtain point estimation and confidence intervals for parameters of interest'
+      
+      ")
+         return(flowchart)
+      })
       
       refresh <- eventReactive(input$refresh, {
          df <- read.csv(
@@ -881,9 +922,7 @@ ctcae <-
                        n.chains = input$chains) 
          
       })
-      
-      
-      
+    
       output$meta_table <- DT::renderDataTable({
          
          return(refresh()[[1]])
@@ -899,6 +938,30 @@ ctcae <-
                       xlab = "Iteration", ylab = "Log odds ratio",
                       main = paste("Chain", k))
          }
+         
+      })
+      
+      output$meta_den <- renderPlot({
+         coda.ma <- refresh()[[2]]
+         post.coda <- NULL
+         for(k in 1:length(coda.ma)){
+            post.coda <- rbind(post.coda, coda.ma[[k]][,"log_or"])
+         }
+         postden <- density(post.coda)
+         p <- plot(postden, main = "Posterior density", xlab = "Log odds ratio")
+         polygon(postden, col = "lightblue", border = "darkblue")
+         return(p)
+         
+      })
+      
+      output$equation <- renderUI({
+         withMathJax(helpText('$$r_{Ci} \\sim binomial(n_{Ci}, \\pi_{Ci}),\\text{  } r_{Ti} \\sim binomial(n_{Ti}, \\pi_{Ti})$$ \n
+                              where $$\\pi_{Ci} \\text{  }and\\text{  } \\pi_{Ti}$$ are true underlying event rate. \n
+                              $$logit(\\pi_{Ci}) = \\mu_i,\\text{  } logit(\\pi_{Ti}) = \\mu_i + \\delta_i$$ \n
+                              where $$\\mu_i \\text{  }and\\text{  }\\delta_i$$ are the baseline risk in each study and underlying true log ORs within studies, respectively. \n
+                              $$\\delta_i \\sim Normal(\\theta, \\tau^2)$$ \n
+                              where $$\\theta\\text{  }and\\text{  } \\tau^2$$ are overall log OR and between-studies variance, respectively. \n
+                              $$mu_i,\\text{  } \\theta,\\text{  } \\tau \\sim priors$$ \n'))
          
       })
  
