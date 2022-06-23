@@ -7,6 +7,7 @@ library(knitr)
 library(gt)
 library(gtsummary)
 library(dplyr)
+library(DiagrammeR)
 library(shinycustomloader)
 
 ui <- navbarPage(
@@ -311,7 +312,7 @@ ui <- navbarPage(
                accept = c("text/csv", ".csv")
              )),
              
-             column(2, numericInput(inputId = "burnin", label = "Burnin", value = 50000)),
+             column(1, numericInput(inputId = "burnin", label = "Burnin", value = 50000)),
              column(2, numericInput(inputId = "iteration", label = "Number of Iteration", value = 200000)),
              column(2, numericInput(inputId = "chains", label = "Number of Chains", value = 3)),
              column(1, numericInput(inputId = "alpha",
@@ -319,7 +320,8 @@ ui <- navbarPage(
                                     value = 0.001)),
              column(1, numericInput(inputId = "beta",
                                     label = "Beta",
-                                    value = 0.001))
+                                    value = 0.001)),
+             column(2, actionButton("report1", "Generate Report"))
              
            ),
            tabsetPanel(
@@ -329,7 +331,7 @@ ui <- navbarPage(
                       uiOutput("equation"),
                       hr(),
                       fluidRow(grVizOutput("flowchart"))),
-             tabPanel("Check model convergence",
+             tabPanel("Result and Check Model Convergence",
                       fluidRow(
              column(2, pickerInput(inputId = "prior_type",
                                    label = "Prior Distribution",
@@ -355,9 +357,12 @@ ui <- navbarPage(
              
            ),
            
-           fluidRow(withLoader(
-             DT::dataTableOutput("meta_table"), type="image", loader="loading-cat.gif"
-           )),
+           fluidRow(
+             column(6,withLoader(
+             DT::dataTableOutput("meta_table"), type="image", loader="loading-cat.gif")
+           ),
+           column(6, plotOutput("logor"))
+           ),
            hr(),
            fluidRow(
              column(6,

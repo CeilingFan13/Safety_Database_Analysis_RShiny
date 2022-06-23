@@ -185,6 +185,9 @@ ctcae <-
       observeEvent(input$report, {
          screenshot()
       })
+      observeEvent(input$report1, {
+         screenshot()
+      })
     
       # dropdown input from page "EAIR"
       # observeEvent(input$treatment1, {
@@ -925,7 +928,9 @@ ctcae <-
     
       output$meta_table <- DT::renderDataTable({
          
-         return(refresh()[[1]])
+         data0 <- refresh()[[1]]
+         data <- data0[rownames(data0) %in% c("OR", "log_or", "tau2"),]
+         return(data)
          
       })
       
@@ -950,8 +955,33 @@ ctcae <-
          postden <- density(post.coda)
          p <- plot(postden, main = "Posterior density", xlab = "Log odds ratio")
          polygon(postden, col = "lightblue", border = "darkblue")
+         v_50 <- summary(coda.ma)$quantiles[ , "50%"]["log_or"]
+         colname <- c("lb", "median", "ub")
+         abline(v = v_50, lty = 4)
          return(p)
          
+      })
+      
+      output$logor <- renderPlot({
+         data0 <- as.data.frame(refresh()[[1]])
+         colnames(data0) <- c("two.five", "fifty", "nineseven")
+         data <- data0[rownames(data0) %in% c("OR", "log_or", "tau2"),]
+         p_ci <-
+            ggplot(data, 
+                   aes(x = fifty,
+                       y = rownames(data),)) +
+            geom_point(
+               size = 3) +
+            geom_text(data = data, 
+                      aes(label = round(fifty, digits = 2)), 
+                      position = position_dodge(width = 0.8),
+                      vjust = -0.3, 
+                      hjust = -0.3) +
+            theme(strip.text.y = element_text(angle = 90, size = 8)) +
+            geom_errorbarh(aes(xmin = two.five, xmax = nineseven)) +
+            xlim(min = -1 * max(data$nineseven) - 1,
+                 max = max(data$nineseven) + 1)
+         return(p_ci)
       })
       
       output$equation <- renderUI({
@@ -964,6 +994,7 @@ ctcae <-
                               $$mu_i,\\text{  } \\theta,\\text{  } \\tau \\sim priors$$ \n'))
          
       })
+      
  
          
       
