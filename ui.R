@@ -9,6 +9,7 @@ library(gtsummary)
 library(dplyr)
 library(DiagrammeR)
 library(shinycustomloader)
+library(bayesmeta)
 
 ui <- navbarPage(
   useShinyjs(),
@@ -312,15 +313,17 @@ ui <- navbarPage(
                accept = c("text/csv", ".csv")
              )),
              
-             column(1, numericInput(inputId = "burnin", label = "Burnin", value = 50000)),
-             column(2, numericInput(inputId = "iteration", label = "Number of Iteration", value = 200000)),
-             column(2, numericInput(inputId = "chains", label = "Number of Chains", value = 3)),
-             column(1, numericInput(inputId = "alpha",
-                                    label = "Alpha",
-                                    value = 0.001)),
-             column(1, numericInput(inputId = "beta",
-                                    label = "Beta",
-                                    value = 0.001)),
+             # column(1, numericInput(inputId = "burnin", label = "Burnin", value = 50000)),
+             # column(2, numericInput(inputId = "iteration", label = "Number of Iteration", value = 200000)),
+             # column(2, numericInput(inputId = "chains", label = "Number of Chains", value = 3)),
+             # column(1, numericInput(inputId = "alpha",
+             #                        label = "Alpha",
+             #                        value = 0.001)),
+             # column(1, numericInput(inputId = "beta",
+             #                        label = "Beta",
+             #                        value = 0.001)),
+             column(5),
+             column(2, actionButton("refresh", "Update")),
              column(2, actionButton("report1", "Generate Report"))
              
            ),
@@ -332,8 +335,19 @@ ui <- navbarPage(
                       hr(),
                       fluidRow(grVizOutput("flowchart"))),
              tabPanel("Result and Check Model Convergence",
+                      fluidRow(column(2, numericInput(inputId = "burnin", label = "Burnin", value = 50000)),
+                               column(2, numericInput(inputId = "iteration", label = "Number of Iteration", value = 200000)),
+                               column(2, numericInput(inputId = "chains", label = "Number of Chains", value = 3)),
+                               column(2, numericInput(inputId = "alpha",
+                                                      label = "Alpha",
+                                                      value = 0.001)),
+                               column(2, numericInput(inputId = "beta",
+                                                      label = "Beta",
+                                                      value = 0.001))
+                               
+                               ),
                       fluidRow(
-             column(2, pickerInput(inputId = "prior_type",
+             column(4, pickerInput(inputId = "prior_type",
                                    label = "Prior Distribution",
                                    choices = c("Inverse-Gamma", 
                                               "Uniform", 
@@ -346,13 +360,12 @@ ui <- navbarPage(
                                                       "Pharmacological vs. pharmacological comparison",
                                                       "Non-pharmacological comparison"),
                                           multiple = FALSE)),
-             column(2, pickerInput(inputId = "outcomes", 
+             column(4, pickerInput(inputId = "outcomes", 
                                    label = "Outcomes",
                                    choices = c("all-cause mortality",
                                                "semi-objective outcome",
-                                               "subjective outcome"))),
-             column(2),
-             column(2, actionButton("refresh", "Update"))
+                                               "subjective outcome")))
+             
              
              
            ),
@@ -373,6 +386,10 @@ ui <- navbarPage(
                   withLoader(plotOutput("meta_den"), type = "text", loader = list(marquee("Density plot coming soon")))
                   )
            )
-           )))
+           ),
+           tabPanel("Frequentist Method",
+                    plotOutput("freq_meta")
+           )
+           ))
 )
 

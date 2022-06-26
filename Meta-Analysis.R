@@ -1,4 +1,5 @@
 ## load libraries 
+## Al Amer, F. M., Thompson, C. G., & Lin, L. (2021). Bayesian Methods for Meta-Analyses of Binary Outcomes: Implementations, Examples, and Impact of Priors. International journal of environmental research and public health, 18(7), 3492. https://doi.org/10.3390/ijerph18073492
 library("rjags")
 library("coda")
 
@@ -20,7 +21,7 @@ ma <- function(prior.distribution){
  delta[i,1] <- 0
  mu[i] ~ dnorm(0, 0.0001) # vague priors for trial baselines
  for(k in 1:2){
- r[i,k] ~ dbin(p[i,k], n[i,k]) # binomial likelihood
+ r[i,k] ~ dbin(p[i,k], n[i,k]) # binomial likelihood with probability parameter p and integer size parameter n
  logit(p[i,k]) <- mu[i] + delta[i,k]
  }
  delta[i,2] ~ dnorm(log_or, prec) # trial-specific log_or distributions

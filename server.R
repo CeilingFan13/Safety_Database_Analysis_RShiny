@@ -21,6 +21,7 @@ library(plotly)
 library("rjags")
 library("coda")
 library(shinycustomloader)
+library(bayesmeta)
 library(DiagrammeR)
 source("Meta-Analysis.R")
 
@@ -925,6 +926,26 @@ ctcae <-
                        n.chains = input$chains) 
          
       })
+      
+      refresh2 <- eventReactive(input$refresh, {
+        df <- read.csv(
+          input$file2$datapath,
+          header = TRUE,
+          sep = ",",
+          blank.lines.skip = TRUE
+        )
+        return(df)
+      })
+      
+      output$freq_meta <- renderPlot({
+        data <- refresh2()
+        es.ae <- escalc(measure="OR",
+                        ai=r2, n1i=n2,
+                        ci=r1, n2i=n1,
+                        slab=study, data=data)
+        forestplot(es.ae, title="XXX event log OR")
+        
+      })
     
       output$meta_table <- DT::renderDataTable({
          
@@ -972,6 +993,7 @@ ctcae <-
                        y = rownames(data),)) +
             geom_point(
                size = 3) +
+           xlab("log OR") + ylab("") +
             geom_text(data = data, 
                       aes(label = round(fifty, digits = 2)), 
                       position = position_dodge(width = 0.8),
