@@ -387,9 +387,21 @@ ui <- navbarPage(
                   )
            )
            ),
-           tabPanel("Frequentist Method",
+           tabPanel("Compare to Frequentist Method",
                     plotOutput("freq_meta")
-           )
+           ),
+           tabPanel("Another Model using bmr()", 
+                    fluidRow(column(3, pickerInput(inputId = "tau_prior", 
+                                                   label = "Type of Tau Prior", 
+                                                   choices = c("uniform", 
+                                                               "sqrt", 
+                                                               "Jeffreys", 
+                                                               "BergerDeely", 
+                                                               "conventional", 
+                                                               "DuMouchel", 
+                                                               "shrinkage", 
+                                                               "I2")))),
+                    plotOutput("bmr_bayesian"))
            ))
 )
 

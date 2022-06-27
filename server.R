@@ -937,12 +937,17 @@ ctcae <-
         return(df)
       })
       
-      output$freq_meta <- renderPlot({
+      effect_size <- eventReactive(input$refresh, {
         data <- refresh2()
         es.ae <- escalc(measure="OR",
                         ai=r2, n1i=n2,
                         ci=r1, n2i=n1,
                         slab=study, data=data)
+        return(es.ae)
+      })
+      
+      output$freq_meta <- renderPlot({
+        es.ae <- effect_size()
         forestplot(es.ae, title="XXX event log OR")
         
       })
@@ -1017,7 +1022,11 @@ ctcae <-
          
       })
       
- 
+      output$bmr_bayesian <- renderPlot({
+        es.ae <- effect_size()
+        bmr00 <- bmr(es.ae, tau.prior = input$tau_prior, mu.prior.mean = input$alpha, mu.prior.sd = input$beta)
+        forestplot(bmr00)
+      })
          
       
    # output$summary_table <- render_gt({
