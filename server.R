@@ -23,7 +23,10 @@ library("coda")
 library(shinycustomloader)
 library(bayesmeta)
 library(DiagrammeR)
+library(runjags)
+library(ProbBayes)
 source("Meta-Analysis.R")
+
 
 ctcae <-
    server <- function(input, output, session) {
@@ -48,7 +51,7 @@ ctcae <-
          df$SOC <- tolower(df$SOC)
          # get list of unique items to filter
          subject_list <- c(unique(df$Subject.ID))
-         site_list <- c(unique(df$Site))
+         site_list <- c(unique(df$Site..))
          pt_list <- c(unique(df$PT))
          soc_list <- c(unique(df$SOC))
          treatment_list <- c(unique(df$Treatment)) %>% sort()
@@ -94,6 +97,12 @@ ctcae <-
             "System Organ Class",
             choices = soc_list,
             selected = soc_list
+         )
+         updatePickerInput(
+           session = session,
+           inputId = "event",
+           choices = pt_list,
+           selected = pt_list
          )
          return(df)
       })
@@ -145,8 +154,7 @@ ctcae <-
             choices = sort(unique(subset(data1$Treatment, data1$Treatment != input$treatment1)))
          )
       })
-      observeEvent(
-         {input$site}, {
+      observeEvent(input$site, {
          data1 <- info()
          a <- filter(data1, data1$Site %in% input$site
                      )
@@ -181,34 +189,13 @@ ctcae <-
             selected = pt_item
 
          )
-      })
-     
+      })   
       observeEvent(input$report, {
          screenshot()
       })
       observeEvent(input$report1, {
          screenshot()
       })
-    
-      # dropdown input from page "EAIR"
-      # observeEvent(input$treatment1, {
-      #    data <- info()
-      #    updatePickerInput(
-      #       session = session,
-      #       inputId = "interest_ae",
-      #       choices = unique(data[data$Treatment == input$treatment1, "PT"])
-      #    )
-      # }, ignoreInit = TRUE)
-      # 
-      # observeEvent(input$treatment2, {
-      #    data <- info()
-      #    updatePickerInput(
-      #       session = session,
-      #       inputId = "interest_ae",
-      #       choices = unique(data[data$Treatment == input$treatment2, "PT"])
-      #    )
-      # }, ignoreInit = TRUE)
-      
       observeEvent({input$prior_type
             input$study_type
             input$outcomes}, {
@@ -216,7 +203,6 @@ ctcae <-
             hide("study_type")
             hide("outcomes")
          }
-         
          if (input$prior_type == "Inverse-Gamma") {
             updateNumericInput(session = session,
                                inputId = "alpha",
@@ -946,11 +932,11 @@ ctcae <-
         return(es.ae)
       })
       
-      output$freq_meta <- renderPlot({
-        es.ae <- effect_size()
-        forestplot(es.ae, title="XXX event log OR")
-        
-      })
+      # output$freq_meta <- renderPlot({
+      #   es.ae <- effect_size()
+      #   forestplot(es.ae, title="XXX event log OR")
+      #   
+      # })
     
       output$meta_table <- DT::renderDataTable({
          
@@ -1027,7 +1013,100 @@ ctcae <-
         bmr00 <- bmr(es.ae, tau.prior = input$tau_prior, mu.prior.mean = input$alpha, mu.prior.sd = input$beta)
         forestplot(bmr00)
       })
-         
+      
+      output$mu_plot <- renderTable({
+        data0 <- refresh()[[2]]
+        sim_posterior = as.data.frame(as.matrix(data0))
+        return(sim_posterior)
+      })
+      
+      beta <- eventReactive(input$yep, {
+        data <- info() %>% select(input$group, PT)
+        data1 <- data %>% group_by(data[, 1]) %>% summarise(n = n(), .groups = "keep")
+        colnames(data1) <- c("name", "n")
+        data2 <- data[data$PT %in% input$event, ]
+        N <- length(unique(data1$name))
+        return(list(data1, data2, N))
+
+      })
+      # output$test <- renderTable({
+      #   data1 <- beta()[[1]]
+      #   return(data1)
+      # })
+
+      output$beta_binom <- renderPlot({
+        data1 <- beta()[[1]]
+        data2 <- beta()[[2]]
+        N <- beta()[[3]]
+        rate <- list()
+        for (i in 1:N) {
+          count = NULL
+          if(any(data2[, 1] == data1$name[i])) {
+            data3 <- data2[data2[, 1] == data1$name[i],]
+            count = nrow(data3)
+          }
+          else {
+            count = 0
+          }
+          rate <- append(rate, count)
+        }
+        y <- unlist(rate)
+        n <- data1$n
+        the_data <- list("y" = y, "n" = n, "N" = N, "mua" = 1, "mub" = 1, "logn" = log(100))
+        modelString <- 
+        "model{
+## likelihood
+for (i in 1:N) {
+  y[i] ~ dbin(p[i], n[i])
+}
+## priors
+for (i in 1:N) {
+  p[i] ~ dbeta(a, b)
+}
+## hyperpriors
+a <- mu * eta
+b <- (1 - mu) * eta
+mu ~ dbeta(mua, mub)
+eta <- exp(logeta)
+logeta ~ dlogis(logn, 1)
+}
+"
+initsfunction <- function(chain) {
+  .RNG.seed <- c(1,2)[chain]
+  .RNG.name <- c("base::Super-Duper",
+                 "base::Wichmann-Hill")[chain]
+  return(list(.RNG.seed=.RNG.seed, .RNG.name=.RNG.name))
+}
+        posterior <- run.jags(modelString,
+                              n.chains = 1,
+                              data = the_data,
+                              monitor = c("p", "mu", "logeta"),
+                              adapt = 1000,
+                              burnin = 5000,
+                              sample = 5000,
+                              inits = initsfunction)
+
+        data4 <- cbind(data1, y)
+        data4$Ratio <- y/n
+        Means1 <- data.frame(Type = "Sample", Mean = data4$Ratio)
+        Post_Means <- summary(posterior)[,4]
+        Means2 <- data.frame(Type = "Posterior", Mean = Post_Means[1:N])
+        Means1$group <- 1:N
+        Means2$group <- 1:N
+
+        p <- ggplot(rbind(Means1, Means2), aes(Type, Mean, group = group)) +
+          geom_line() +
+          geom_point(size=3)
+
+        return(p)
+
+      })
+      
+      
+      
+      
+      
+      
       
    # output$summary_table <- render_gt({
    #   data <- info()
