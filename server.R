@@ -997,15 +997,24 @@ ctcae <-
          return(p_ci)
       })
       
+      output$equation0 <- renderUI({
+         withMathJax(helpText('$$Y_i \\sim binomial(n_i, p_i)$$ \n
+                              where $$Y_i$$ denote the number of events in the group. $$n_i \\text{ } and \\text{ } p_i$$ are number of case and event rate. We model the event rate prior with beta distribution. \n
+                              $$p_i \\sim beta(a, b)$$ The stage 2 prior would be: \n
+                              $$\\mu \\sim beta(1, 1) \\text{ } log \\eta \\sim logit(log n, 1)$$ \n
+                              where $$a = \\mu\\eta \\text{ } and \\text{ } b = (1 - \\mu)\\eta$$'
+                              ))
+         
+      })
+      
       output$equation <- renderUI({
-         withMathJax(helpText('$$r_{Ci} \\sim binomial(n_{Ci}, \\pi_{Ci}),\\text{  } r_{Ti} \\sim binomial(n_{Ti}, \\pi_{Ti})$$ \n
+        withMathJax(helpText('$$r_{Ci} \\sim binomial(n_{Ci}, \\pi_{Ci}),\\text{  } r_{Ti} \\sim binomial(n_{Ti}, \\pi_{Ti})$$ \n
                               where $$\\pi_{Ci} \\text{  }and\\text{  } \\pi_{Ti}$$ are true underlying event rate. \n
                               $$logit(\\pi_{Ci}) = \\mu_i,\\text{  } logit(\\pi_{Ti}) = \\mu_i + \\delta_i$$ \n
                               where $$\\mu_i \\text{  }and\\text{  }\\delta_i$$ are the baseline risk in each study and underlying true log ORs within studies, respectively. \n
                               $$\\delta_i \\sim Normal(\\theta, \\tau^2)$$ \n
                               where $$\\theta\\text{  }and\\text{  } \\tau^2$$ are overall log OR and between-studies variance, respectively. \n
                               $$mu_i,\\text{  } \\theta,\\text{  } \\tau \\sim priors$$ \n'))
-         
       })
       
       output$bmr_bayesian <- renderPlot({
@@ -1085,18 +1094,31 @@ initsfunction <- function(chain) {
                               burnin = 5000,
                               sample = 5000,
                               inits = initsfunction)
+        
+        
+        output$mu <- renderPlot({
+          plot(posterior, vars = "mu")
+        })
+        output$logeta <- renderPlot({
+          plot(posterior, vars = "logeta")
+        })
 
         data4 <- cbind(data1, y)
         data4$Ratio <- y/n
-        Means1 <- data.frame(Type = "Sample", Mean = data4$Ratio)
+        Means1 <- data.frame(Type = "Data", Mean = data4$Ratio)
         Post_Means <- summary(posterior)[,4]
         Means2 <- data.frame(Type = "Posterior", Mean = Post_Means[1:N])
         Means1$group <- 1:N
+        Means1$name <- data1$name
         Means2$group <- 1:N
+        Means2$name <- data1$name
+        mix <- rbind(Means1, Means2)
 
-        p <- ggplot(rbind(Means1, Means2), aes(Type, Mean, group = group)) +
+        p <- ggplot(mix, aes(Type, Mean, group = group, color = name)) +
           geom_line() +
-          geom_point(size=3)
+          geom_point(size=3) +
+          theme(text=element_text(size=18)) +
+          ylab("Proportion") 
 
         return(p)
 

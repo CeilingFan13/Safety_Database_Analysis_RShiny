@@ -191,20 +191,29 @@ ui <- navbarPage(
  #------------------------------------------------------------------------------
  tabPanel(
    title = "Hierarchical Beta-Binomial Modeling",
-   fluidRow(
-     column(3, pickerInput(inputId = "group", 
-                           label = "Group to Compare by:", 
-                           choices = c("Country", "Site..", "Treatment", "SOC"))),
-     column(3,pickerInput(inputId = "event", 
-                          label = "Event", 
-                          choices = NULL, 
-                          multiple = TRUE,
-                          options = list("actions-box" = TRUE))),
-     column(3, actionButton("yep", "Update"))
-     
-   ),
-   plotOutput("beta_binom")
-   #tableOutput("test")
+   tabsetPanel(
+     tabPanel("Model Consideration",
+              withMathJax(),
+              helpText("The theoretical formula behind this Bayesian model:"),
+              uiOutput("equation0")),
+     tabPanel("Evaluation and Result",
+     fluidRow(
+       column(3, pickerInput(inputId = "group", 
+                             label = "Group to Compare by:", 
+                             choices = c("Country", "Site..", "Treatment", "SOC"))),
+       column(3,pickerInput(inputId = "event", 
+                            label = "Event", 
+                            choices = NULL, 
+                            multiple = TRUE,
+                            options = list("actions-box" = TRUE))),
+       column(3, actionButton("yep", "Update"))
+       
+     ),
+     fluidRow(plotOutput("mu")),
+     fluidRow(plotOutput("logeta")),
+     plotOutput("beta_binom")
+   )
+   )
  ),
  #------------------------------------------------------------------------------ 
   tabPanel(title = "Univariate Bayesian Meta-Analysis of OR",
