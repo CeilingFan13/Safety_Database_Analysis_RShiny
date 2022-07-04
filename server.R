@@ -1114,9 +1114,9 @@ initsfunction <- function(chain) {
             S_rank1 <- rank1 %>% 
               group_by(variable) %>% 
               summarize(N = n()) %>% 
-              mutate(Probability = N / sum(N), Hospital = data1$name)
+              mutate(Probability_of_least_AE = N / sum(N), Group = data1$name)
             S_rank1$group <- data1$name
-            p <- ggplot(S_rank1, aes(reorder(group, Probability), Probability)) + 
+            p <- ggplot(S_rank1, aes(reorder(group, Probability_of_least_AE), Probability_of_least_AE)) + 
               geom_point(size = 4) + 
               coord_flip() + 
               theme(text=element_text(size=18)) + 
