@@ -25,6 +25,7 @@ library(bayesmeta)
 library(DiagrammeR)
 library(runjags)
 library(ProbBayes)
+library(ggridges)
 source("Meta-Analysis.R")
 
 
@@ -1095,7 +1096,34 @@ initsfunction <- function(chain) {
                               sample = 5000,
                               inits = initsfunction)
         
-        
+        output$p <- renderPlot({
+          p_draws <- as.mcmc(posterior, vars = "p")
+          
+          df = as.data.frame(cbind(seq(1:5000),p_draws))
+          
+          df_long = melt(df, id.vars = "V1")
+          
+          p <- ggplot(df_long, aes(x = value, y = variable)) +
+            geom_density_ridges() +
+            theme_grey(base_size = 20, base_family = "") +
+            xlim(0, .15)
+          output$compare <- renderPlot({
+            rank_data <- df_long %>% group_by(V1) %>% mutate(Ranks = rank(value))
+            rank1 <- rank_data %>% filter(Ranks == 1)
+            S_rank1 <- rank1 %>% 
+              group_by(variable) %>% 
+              summarize(N = n()) %>% 
+              mutate(Probability = N / sum(N), Hospital = data1$name)
+            S_rank1$group <- data1$name
+            p <- ggplot(S_rank1, aes(reorder(group, Probability), Probability)) + 
+              geom_point(size = 4) + 
+              coord_flip() + 
+              theme(text=element_text(size=18)) + 
+              xlab("Group")
+            return(p)
+          })
+          return(p)
+        })
         output$mu <- renderPlot({
           plot(posterior, vars = "mu")
         })

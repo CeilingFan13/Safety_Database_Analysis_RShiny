@@ -209,9 +209,14 @@ ui <- navbarPage(
        column(3, actionButton("yep", "Update"))
        
      ),
+     fluidRow(plotOutput("p")),
      fluidRow(plotOutput("mu")),
      fluidRow(plotOutput("logeta")),
-     plotOutput("beta_binom")
+     fluidRow(
+       column(6, plotOutput("beta_binom")),
+       column(6, plotOutput("compare"))
+       
+       )
    )
    )
  ),
