@@ -193,6 +193,7 @@ ui <- navbarPage(
    title = "Hierarchical Beta-Binomial Modeling",
    tabsetPanel(
      tabPanel("Model Consideration",
+              "The objective is to learn about the adverse event probability of the group of interest (country, sites, treatment groups). This modeling setup provides posterior estimates that partially pool information among groups.",
               withMathJax(),
               helpText("The theoretical formula behind this Bayesian model:"),
               uiOutput("equation0")),

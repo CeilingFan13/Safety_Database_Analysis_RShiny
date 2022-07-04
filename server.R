@@ -1001,9 +1001,10 @@ ctcae <-
       output$equation0 <- renderUI({
          withMathJax(helpText('$$Y_i \\sim binomial(n_i, p_i)$$ \n
                               where $$Y_i$$ denote the number of events in the group. $$n_i \\text{ } and \\text{ } p_i$$ are number of case and event rate. We model the event rate prior with beta distribution. \n
-                              $$p_i \\sim beta(a, b)$$ The stage 2 prior would be: \n
+                              $$p_i \\sim beta(a, b)$$ With a denotes number of adverse event, b means the number of cases without adverse event. The stage 2 prior would be: \n
                               $$\\mu \\sim beta(1, 1) \\text{ } log \\eta \\sim logit(log n, 1)$$ \n
-                              where $$a = \\mu\\eta \\text{ } and \\text{ } b = (1 - \\mu)\\eta$$'
+                              where $$a = \\mu\\eta \\text{ } and \\text{ } b = (1 - \\mu)\\eta$$ \n
+                              In another word, $$\\mu = \\frac{a}{a+b}\\text{ } and \\text{ } \\eta = a + b$$'
                               ))
          
       })
