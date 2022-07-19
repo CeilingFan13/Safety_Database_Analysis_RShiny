@@ -210,9 +210,11 @@ ui <- navbarPage(
        column(3, actionButton("yep", "Update"))
        
      ),
+     fluidRow("Compare the posterior densities of the different event rate:"),
      fluidRow(plotOutput("p")),
-     fluidRow(plotOutput("mu")),
-     fluidRow(plotOutput("logeta")),
+     plotOutput("mu"),
+     plotOutput("logeta"),
+     fluidRow(column(6, "Shrinkage plot showing how the sample proportions are shrunk towards the overall event rate:")),
      fluidRow(
        column(6, plotOutput("beta_binom")),
        column(6, plotOutput("compare"))
@@ -299,7 +301,7 @@ ui <- navbarPage(
            # tabPanel("Compare to Frequentist Method",
            #          plotOutput("freq_meta")
            # ),
-           tabPanel("Compare to Frequentist Method", 
+           tabPanel("Random-effects Meta-regression Model", 
                     fluidRow(column(3, pickerInput(inputId = "tau_prior", 
                                                    label = "Type of Tau Prior", 
                                                    choices = c("uniform", 
@@ -310,7 +312,9 @@ ui <- navbarPage(
                                                                "DuMouchel", 
                                                                "shrinkage", 
                                                                "I2")))),
-                    plotOutput("bmr_bayesian"))
+                    plotOutput("bmr_bayesian")),
+           tabPanel("Pairwise Bayesian Model",
+                    plotOutput("bmr_pairwise"))
            ))
 )
 

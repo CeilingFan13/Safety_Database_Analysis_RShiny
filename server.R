@@ -1002,7 +1002,7 @@ ctcae <-
          withMathJax(helpText('$$Y_i \\sim binomial(n_i, p_i)$$ \n
                               where $$Y_i$$ denote the number of events in the group. $$n_i \\text{ } and \\text{ } p_i$$ are number of case and event rate. We model the event rate prior with beta distribution. \n
                               $$p_i \\sim beta(a, b)$$ With a denotes number of adverse event, b means the number of cases without adverse event. The stage 2 prior would be: \n
-                              $$\\mu \\sim beta(1, 1) \\text{ } log \\eta \\sim logit(log n, 1)$$ \n
+                              $$\\mu \\sim beta(1, 1) \\text{ } log (\\eta) \\sim logit(log n*, 1)$$ \n
                               where $$a = \\mu\\eta \\text{ } and \\text{ } b = (1 - \\mu)\\eta$$ \n
                               In another word, $$\\mu = \\frac{a}{a+b}\\text{ } and \\text{ } \\eta = a + b$$'
                               ))
@@ -1023,6 +1023,27 @@ ctcae <-
         es.ae <- effect_size()
         bmr00 <- bmr(es.ae, tau.prior = input$tau_prior, mu.prior.mean = input$alpha, mu.prior.sd = input$beta)
         forestplot(bmr00)
+      })
+      
+      output$bmr_pairwise <- renderPlot({
+        dat <- refresh2()
+        es.ae <- effect_size()
+        group <- c(dat$control, dat$treatment) %>% as.factor()
+        index <- as.numeric(group)
+        dic <- data.frame(group, index) %>% group_by_all %>% count
+        X <- cbind(index[1:(length(index)/2)], index[(length(index)/2+1) : length(index)])
+        bmr01 <- bmr(es.ae, X=X)
+        contrastX <- unique(X)
+        name <- list()
+        for (n in 1:nrow(contrastX)) {
+          num1 <- contrastX[n,][1]
+          num2 <- contrastX[n,][2]
+          name <- append(name, paste(dic[dic$index == num1,]$group, "vs.", dic[dic$index == num2,]$group))
+          
+        }
+        rownames(contrastX) <- name
+        p <- forestplot(bmr01, X.mean=contrastX, xlab="log-OR")
+        return(p)
       })
       
       output$mu_plot <- renderTable({
@@ -1108,6 +1129,7 @@ initsfunction <- function(chain) {
             geom_density_ridges() +
             theme_grey(base_size = 20, base_family = "") +
             xlim(0, .15)
+          
           output$compare <- renderPlot({
             rank_data <- df_long %>% group_by(V1) %>% mutate(Ranks = rank(value))
             rank1 <- rank_data %>% filter(Ranks == 1)
@@ -1126,10 +1148,12 @@ initsfunction <- function(chain) {
           return(p)
         })
         output$mu <- renderPlot({
-          plot(posterior, vars = "mu")
+          p <- plot(posterior, vars = "mu")
+          return(p)
         })
         output$logeta <- renderPlot({
-          plot(posterior, vars = "logeta")
+          p <- plot(posterior, vars = "logeta")
+          return(p)
         })
 
         data4 <- cbind(data1, y)

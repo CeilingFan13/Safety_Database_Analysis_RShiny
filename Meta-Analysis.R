@@ -8,7 +8,7 @@ library("coda")
 # tau x tau = between-studies variance
 # delta = true log ORs within studies
 # log_or = log odd ratio
-# prec = error measure
+# prec = precision; error measure
 ################################################################
 ## functions
 ma <- function(prior.distribution){
