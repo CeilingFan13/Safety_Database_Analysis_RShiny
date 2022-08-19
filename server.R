@@ -1,31 +1,46 @@
-library(readxl)
-library(shiny)
-library(ggplot2)
-library(Dict)
-library(stringr)
-library(dplyr)
-library(tidyselect)
-library(tidyverse)
-library(kableExtra)
-library(rtf)
-library(knitr)
-library(gt)
-library(gtsummary)
-library(heatmaply)
-library(epitools)
-library(lubridate)
-library(grid)
-library(shinyscreenshot)
-library(reshape)
-library(plotly)
-library("rjags")
-library("coda")
-library(shinycustomloader)
-library(bayesmeta)
-library(DiagrammeR)
-library(runjags)
-library(ProbBayes)
-library(ggridges)
+packages <- c("readxl", "shiny", "ggplot", "Dict", "stringr", 
+              "dplyr", "tidyselect", "tidyverse", "kableExtra", "rtf",
+              "knitr", "gt", "gtsummary", "heatmaply", "epitools", 
+              "lubridate", "grid", "shinyscreenshot", "reshape", "plotly", 
+              "rjags", "coda", "shinycustomloader", "bayesmeta", "DiagrammeR",
+              "runjags", "ProbBayes", "ggridges")
+
+for(pac in packages) {
+  if(pac %in% rownames(installed.packages()) == FALSE) {
+    install.packages(pac)
+  }
+}
+
+lapply(packages, require, character.only = TRUE)  
+# in case above line fails, uncomment the lines below
+# library(readxl)
+# library(shiny)
+# library(ggplot2)
+# library(Dict)
+# library(stringr)
+# library(dplyr)
+# library(tidyselect)
+# library(tidyverse)
+# library(kableExtra)
+# library(rtf)
+# library(knitr)
+# library(gt)
+# library(gtsummary)
+# library(heatmaply)
+# library(epitools)
+# library(lubridate)
+# library(grid)
+# library(shinyscreenshot)
+# library(reshape)
+# library(plotly)
+# library("rjags")
+# library("coda")
+# library(shinycustomloader)
+# library(bayesmeta)
+# library(DiagrammeR)
+# library(runjags)
+# library(ProbBayes)
+# library(ggridges)
 source("Meta-Analysis.R")
 
 

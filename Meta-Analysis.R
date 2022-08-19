@@ -9,7 +9,7 @@ library("coda")
 # log_or = log odd ratio
 # prec = precision; error measure
 #-------------------------------------------------------------------------------
-# functions
+# identify choice os prior distribution and output appropriate model
 ma <- function(prior.distribution){
   # inverse-gamma; alpha > 0: shape, beta > 0: scale
   # As both hyper-parameters approach zero, 
@@ -18,14 +18,14 @@ ma <- function(prior.distribution){
     out <- "model{
  for(i in 1:n.studies){
  delta[i,1] <- 0
- mu[i] ~ dnorm(0, 0.0001) # vague priors for trial baselines
+ mu[i] ~ dnorm(0, 0.0001) # trial baseline prior
  for(k in 1:2){
  r[i,k] ~ dbin(p[i,k], n[i,k]) # binomial likelihood with probability parameter p and integer size parameter n
  logit(p[i,k]) <- mu[i] + delta[i,k]
  }
- delta[i,2] ~ dnorm(log_or, prec) # trial-specific log_or distributions
+ delta[i,2] ~ dnorm(log_or, prec) # trial log OR distribution
  }
- log_or ~ dnorm(0, 0.0001) # vague priors for log odds ratio
+ log_or ~ dnorm(0, 0.0001) # log OR priors
  # inverse gamma prior
  tau2 <- 1/prec
  tau <- sqrt(1/prec)
@@ -38,14 +38,14 @@ ma <- function(prior.distribution){
     out <- "model{
  for(i in 1:n.studies){
  delta[i,1] <- 0
- mu[i] ~ dnorm(0, 0.0001) # vague priors for trial baselines
+ mu[i] ~ dnorm(0, 0.0001) # trial baseline prior
  for(k in 1:2){
  r[i,k] ~ dbin(p[i,k], n[i,k]) # binomial likelihood
  logit(p[i,k]) <- mu[i] + delta[i,k]
  }
- delta[i,2] ~ dnorm(log_or, prec) # trial-specific log_or distributions
+ delta[i,2] ~ dnorm(log_or, prec) # trial log OR distribution
  }
- log_or ~ dnorm(0, 0.0001) # vague priors for log odds ratio
+ log_or ~ dnorm(0, 0.0001) # log OR priors
  # uniform prior
  tau2 <- tau*tau
  prec <- 1/tau2
@@ -56,33 +56,33 @@ ma <- function(prior.distribution){
     out <- "model{
  for(i in 1:n.studies){
  delta[i,1] <- 0
- mu[i] ~ dnorm(0, 0.0001) # vague priors for trial baselines
+ mu[i] ~ dnorm(0, 0.0001) # trial baseline prior
  for(k in 1:2){
  r[i,k] ~ dbin(p[i,k], n[i,k]) # binomial likelihood
  logit(p[i,k]) <- mu[i] + delta[i,k]
  }
- delta[i,2] ~ dnorm(log_or, prec) # trial-specific log_or distributions
+ delta[i,2] ~ dnorm(log_or, prec) # trial log OR distribution
  }
- log_or ~ dnorm(0, 0.0001) # vague priors for log odds ratio
+ log_or ~ dnorm(0, 0.0001) # log OR priors
  # half-mormal prior
  tau2 <- tau*tau
  prec <- 1/tau2
  tau ~ dnorm(alpha, 1/beta) T(0,)
  OR <- exp(log_or)
     }" }
-  # make sure to include table 1 from the paper
+
   else if (prior.distribution == "Log-Normal") {
     out <- "model{
  for(i in 1:n.studies){
  delta[i,1] <- 0
- mu[i] ~ dnorm(0, 0.0001) # vague priors for trial baselines
+ mu[i] ~ dnorm(0, 0.0001) # trial baseline prior
  for(k in 1:2){
  r[i,k] ~ dbin(p[i,k], n[i,k]) # binomial likelihood
  logit(p[i,k]) <- mu[i] + delta[i,k]
  }
- delta[i,2] ~ dnorm(log_or, prec) # trial-specific log_or distributions
+ delta[i,2] ~ dnorm(log_or, prec) # trial log OR distribution
  }
- log_or ~ dnorm(0, 0.0001) # vague priors for log odds ratio
+ log_or ~ dnorm(0, 0.0001) # log OR priors
  # log-normal prior
  prec <- 1/tau2
  tau <- sqrt(1/prec)
@@ -116,12 +116,12 @@ prior_results <- function(data, prior, alpha, beta,
     inits[[i]] <- init
     }
     
-  params <- c("OR", "log_or", "prec", "tau", "tau2")
+  parameters <- c("OR", "log_or", "prec", "tau", "tau2")
   set.seed(seed)
   jags.ma <- jags.model(file = textConnection(ma(prior)), data = dat.jags,
                         n.chains = n.chains, n.adapt = n.adapt, inits = inits)
   update(jags.ma, n.iter = n.burnin)
-  coda.ma <- coda.samples(model = jags.ma, variable.names = params,
+  coda.ma <- coda.samples(model = jags.ma, variable.names = parameters,
                           n.iter = n.iter, thin = thin)
   smry.ma <- summary(coda.ma)
   # print(smry.ma)
