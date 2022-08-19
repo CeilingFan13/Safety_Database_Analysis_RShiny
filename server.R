@@ -895,6 +895,8 @@ ctcae <-
          return(flowchart)
       })
       
+      # refresh and refresh2 update file intake from meta-analysis page
+      # and send to appropriate functions
       refresh <- eventReactive(input$refresh, {
          df <- read.csv(
             input$file2$datapath,
@@ -932,12 +934,6 @@ ctcae <-
                         slab=study, data=data)
         return(es.ae)
       })
-      
-      # output$freq_meta <- renderPlot({
-      #   es.ae <- effect_size()
-      #   forestplot(es.ae, title="XXX event log OR")
-      #   
-      # })
     
       output$meta_table <- DT::renderDataTable({
          
@@ -1032,18 +1028,17 @@ ctcae <-
         index <- as.numeric(group)
         dic <- data.frame(group, index) %>% group_by_all %>% count
         X <- cbind(index[1:(length(index)/2)], index[(length(index)/2+1) : length(index)])
-        bmr01 <- bmr(es.ae, X=X)
+        bmr01 <- bmr(es.ae, X=X, tau.prior = input$tau_prior, mu.prior.mean = input$alpha, mu.prior.sd = input$beta)
         contrastX <- unique(X)
         name <- list()
         for (n in 1:nrow(contrastX)) {
           num1 <- contrastX[n,][1]
           num2 <- contrastX[n,][2]
           name <- append(name, paste(dic[dic$index == num1,]$group, "vs.", dic[dic$index == num2,]$group))
-          
         }
         rownames(contrastX) <- name
-        p <- forestplot(bmr01, X.mean=contrastX, xlab="log-OR")
-        return(p)
+        forestplot(bmr01, X.mean=contrastX, xlab="log-OR")
+        
       })
       
       output$mu_plot <- renderTable({
@@ -1119,8 +1114,8 @@ initsfunction <- function(chain) {
                               inits = initsfunction)
         
         output$p <- renderPlot({
+          # draw 5000 MCMC iterations, and identifies the group with the smallest simulated value
           p_draws <- as.mcmc(posterior, vars = "p")
-          
           df = as.data.frame(cbind(seq(1:5000),p_draws))
           
           df_long = melt(df, id.vars = "V1")
@@ -1136,9 +1131,9 @@ initsfunction <- function(chain) {
             S_rank1 <- rank1 %>% 
               group_by(variable) %>% 
               summarize(N = n()) %>% 
-              mutate(Probability_of_least_AE = N / sum(N), Group = data1$name)
+              mutate(Probability_of_least_AE_likelihood = N / sum(N), Group = data1$name)
             S_rank1$group <- data1$name
-            p <- ggplot(S_rank1, aes(reorder(group, Probability_of_least_AE), Probability_of_least_AE)) + 
+            p <- ggplot(S_rank1, aes(reorder(group, Probability_of_least_AE_likelihood), Probability_of_least_AE_likelihood)) + 
               geom_point(size = 4) + 
               coord_flip() + 
               theme(text=element_text(size=18)) + 
@@ -1176,95 +1171,7 @@ initsfunction <- function(chain) {
         return(p)
 
       })
-      
-      
-      
-      
-      
-      
-      
-   # output$summary_table <- render_gt({
-   #   data <- info()
-   #   data <- data %>% select(any_of(c("SOC", "PT", "Treatment")))
-   #   # data3 <-data %>%
-   #   #   mutate(SOC = paste("SOC", SOC)) %>%
-   #   #   tbl_strata(
-   #   #     strata = SOC,
-   #   #     .tbl_fun =
-   #   #       ~ .x %>%
-   #   #       tbl_summary(by = Treatment, missing = "no") %>%
-   #   #       add_n(),
-   #   #     .header = "**{strata}**, N = {n}"
-   #   #   ) %>% as_gt
-   #   data3 <- data %>% 
-   #     tbl_summary(by = Treatment, missing = "no") %>%
-   #     as_gt()
-   # 
-   #   # # sorting the events by categories and severity
-   #   # data <- data[order(data$SOC, data$PT, -data$Grade), ]
-   #   # # ae <- data %>%
-   #   # #   group_by(Subject.ID, Treatment, SOC) %>%
-   #   # #   arrange(Subject.ID, Treatment, SOC, -Grade) %>%
-   #   # #   slice_head(1)
-   #   # 
-   #   # data <- data[order(data$Treatment, data$SOC, data$PT, -data$Grade), ]
-   #   # N_pat <- n_distinct(data$Subject.ID)
-   #   # data2 <- data %>% 
-   #   #   group_by(Treatment, SOC, PT, Grade, Subject.ID) %>%
-   #   #   summarise(n_ae = n()) %>%
-   #   #   group_by(Treatment, SOC, PT, Grade) %>%
-   #   #   summarise(n_pat = n(), n_ae = sum(n_ae)) %>%
-   #   #   mutate(pct = round(n_ae/N_pat*100, digits = 1),
-   #   #          txt = paste0("[", n_ae,"] ", n_pat, " (", pct, "%)"),
-   #   #          arm = paste0("Group ", Treatment)) 
-   # 
-   #   # header_ae <- data %>%
-   #   #   group_by(Treatment, Subject.ID) %>%
-   #   #   summarise(n=n()) %>%
-   #   #   group_by(Treatment) %>%
-   #   #   summarise(n = n()) %>%
-   #   #   ungroup() %>%
-   #   #   mutate(armtxt = n_distinct(Treatment)) %>%
-   #   #   mutate(txt = paste0(armtxt, " (N=", n, ")")) %>%
-   #   #   select(txt) %>%
-   #   #   deframe
-   #   # 
-   #   # ae_table_fns <- function(data, filtervar){
-   #   #   
-   #   #   filtervar = ensym(filtervar)
-   #   #   
-   #   #   data %>%
-   #   #     group_by(Treatment) %>%
-   #   #     mutate(N_pat = n_distinct(Subject.ID)) %>%
-   #   #     filter(!!filtervar == 1)  %>%
-   #   #     group_by(Subject.ID, Treatment, N_pat, SOC, PT) %>%
-   #   #     summarise(n_ae = n()) %>%
-   #   #     filter(!is.na(PT)) %>%
-   #   #     group_by(Treatment, N_pat, SOC, PT) %>%
-   #   #     summarise(n_pat = n(),
-   #   #               n_ae = sum(n_ae)) %>%
-   #   #     mutate(pct = round(n_pat/N_pat*100,digits = 1),
-   #   #            txt = paste0("[", n_ae,"] ", n_pat, " (", pct, "%)"),
-   #   #            arm = paste0("arm", Treatment)) %>%
-   #   #     ungroup %>% select(arm, SOC, PT, txt) %>%
-   #   #     pivot_wider(values_from = txt, names_from = arm) %>%
-   #   #     mutate_at(vars(starts_with("arm")), ~if_else(is.na(.), "", .)) %>%
-   #   #     arrange(SOC, PT) %>%  group_by(SOC2 = SOC) %>%
-   #   #     mutate(SOC = if_else(row_number() != 1, "", SOC)) %>% ungroup() %>% select(-SOC2)
-   #   # }
-   #   # data3 <- adae %>%
-   #   #   bind_rows(adae, .id="added") %>%
-   #   #   filter(!is.na(PT)) %>% 
-   #   #   mutate(PT = if_else(added == 2, "#Total", PT)) %>%
-   #   #   mutate(all = 1) %>%
-   #   #   ae_table_fns("all") %>%
-   #   #   table(col.names = c("System Organ Class", "Preferred Term", header_ae),
-   #   #                caPTion = " Adverse Events by System Organ Class and Preferred term*",
-   #   #                booktabs = TRUE,
-   #   #                longtable = TRUE)
-   #   return(data3)
-   #   
-   # })
+
 }
 
 

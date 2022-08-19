@@ -5,10 +5,10 @@ account: hvkiwq-shuang0fan
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 6249184
-bundleId: 6071206
+bundleId: 6123464
 url: https://hvkiwq-shuang0fan.shinyapps.io/safety_database/
-when: 1657030483.3369
-lastSyncTime: 1657030483.33692
+when: 1658500391.18597
+lastSyncTime: 1658500391.18598
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: BB_data.csv|BB.R|BerryBerry_Model.stan|beta_binom.R|binom2.rds|binom2.stan|data.csv|dummy_w_TG.csv|dummy_w_TG1.csv|meta_data.csv|mod1.txt|model_data.xlsx|README.md|stat_model.R|stat1|stat1.stan|summary1_MA.txt|test.R|www/.DS_Store|www/loading-cat.gif
+ignoredFiles: BB_data.csv|BB.R|BerryBerry_Model.stan|beta_binom.R|binom2.rds|binom2.stan|data.csv|dummy_w_TG.csv|dummy_w_TG1.csv|meta_data.csv|mod1.txt|model_data.xlsx|README.md|stat_model.R|stat1|stat1.stan|summary1_MA.txt|test.R|www/.DS_Store

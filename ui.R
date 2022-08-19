@@ -232,7 +232,13 @@ ui <- navbarPage(
                multiple = FALSE,
                accept = c("text/csv", ".csv")
              )),
-             column(5),
+             column(2, numericInput(inputId = "alpha",
+                                    label = "Alpha",
+                                    value = 0.001)),
+             column(2, numericInput(inputId = "beta",
+                                    label = "Beta",
+                                    value = 0.001)),
+             column(1),
              column(2, actionButton("refresh", "Update")),
              column(2, actionButton("report1", "Generate Report"))
              
@@ -248,12 +254,12 @@ ui <- navbarPage(
                       fluidRow(column(2, numericInput(inputId = "burnin", label = "Burnin", value = 50000)),
                                column(2, numericInput(inputId = "iteration", label = "Number of Iteration", value = 200000)),
                                column(2, numericInput(inputId = "chains", label = "Number of Chains", value = 3)),
-                               column(2, numericInput(inputId = "alpha",
-                                                      label = "Alpha",
-                                                      value = 0.001)),
-                               column(2, numericInput(inputId = "beta",
-                                                      label = "Beta",
-                                                      value = 0.001))
+                               # column(2, numericInput(inputId = "alpha",
+                               #                        label = "Alpha",
+                               #                        value = 0.001)),
+                               # column(2, numericInput(inputId = "beta",
+                               #                        label = "Beta",
+                               #                        value = 0.001))
                                
                                ),
                       fluidRow(
@@ -314,7 +320,7 @@ ui <- navbarPage(
                                                                "I2")))),
                     plotOutput("bmr_bayesian")),
            tabPanel("Pairwise Bayesian Model",
-                    plotOutput("bmr_pairwise"))
+                    fluidRow(plotOutput("bmr_pairwise")))
            ))
 )
 

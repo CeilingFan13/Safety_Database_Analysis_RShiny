@@ -1,4 +1,3 @@
-## load libraries 
 ## Al Amer, F. M., Thompson, C. G., & Lin, L. (2021). Bayesian Methods for Meta-Analyses of Binary Outcomes: Implementations, Examples, and Impact of Priors. International journal of environmental research and public health, 18(7), 3492. https://doi.org/10.3390/ijerph18073492
 library("rjags")
 library("coda")
@@ -9,8 +8,8 @@ library("coda")
 # delta = true log ORs within studies
 # log_or = log odd ratio
 # prec = precision; error measure
-################################################################
-## functions
+#-------------------------------------------------------------------------------
+# functions
 ma <- function(prior.distribution){
   # inverse-gamma; alpha > 0: shape, beta > 0: scale
   # As both hyper-parameters approach zero, 
@@ -105,6 +104,7 @@ prior_results <- function(data, prior, alpha, beta,
   dat.jags <- list(n.studies = length(data$r1), alpha = alpha, beta = beta, 
                    r = cbind(data$r1,data$r2), n = cbind(data$n1, data$n2))
   inits <- list()
+  # flexible inits for user to define different chain number
   for(i in 1:n.chains){
     num <- "123"
     end <- i + 3
