@@ -1008,7 +1008,7 @@ ctcae <-
                  max = max(data$nineseven) + 1)
          return(p_ci)
       })
-      
+#-------------------------------------------------------------------------------       
       output$equation0 <- renderUI({
          withMathJax(helpText('$$Y_i \\sim binomial(n_i, p_i)$$ \n
                               where $$Y_i$$ denote the number of events in the group. $$n_i \\text{ } and \\text{ } p_i$$ are number of case and event rate. We model the event rate prior with beta distribution. \n
@@ -1030,6 +1030,28 @@ ctcae <-
                               $$mu_i,\\text{  } \\theta,\\text{  } \\tau \\sim priors$$ \n'))
       })
       
+      output$equation2 <- renderUI({
+        withMathJax(helpText('$$Y_{bj} \\sim Binomial(N_t, t_{bj}),\\text{  } X_{bj} \\sim Binomial(N_c, c_{bj})$$ \n
+                             where Y and X are the number of subjects with an AE with PT j under SOC b. N is the number of subjects in each group, and t and c refers to probabily of AE in treament and control groups, respectively. \n
+                             A logistic regression mean structure is utilized: \n
+                             $$logit(c_{bj}) = log(\\frac{c_{bj}}{1-c_{bj}}) = \\gamma_{bj};\\text{  } logit(t_{bj}) = \\gamma_{bj} + \\theta_{bj}$$ \n
+                             The stage 1 prior distributions are: \n
+                             $$\\gamma_{bj} \\sim Normal(\\mu_{\\gamma b}, \\tau^2_{\\gamma b})\\text{  }and\\text{  } \\theta_{bj} \\sim \\pi_b \\delta(0) + (1 - \\pi_b)Normal(\\mu_{\\theta b}, \\sigma^2_{\\theta b})$$ \n
+                             Dirac delta(0) has unit point mass at 0, allowing equality of the treatment and control AE rates as most events are not affected by treatment. \n
+                             $$\\pi_b \\sim Beta(\\alpha_\\pi, \\beta_\\pi);\\text{  }\\alpha_\\pi \\sim Exp(\\lambda_\\alpha); \\text{  } \\beta_\\pi \\sim Exp(\\lambda_\\beta)$$ \n
+                             The stage 2 prior distributions are: \n
+                             $$\\mu_{\\gamma b} \\sim Normal(\\mu_{\\gamma0}, \\tau^2_{\\gamma0})\\text{  } \\sigma^2_{\\gamma b} \\sim IG(\\alpha_\\gamma, \\beta_\\gamma)$$ \n
+                             $$\\mu_{\\theta b} \\sim Normal(\\mu_{\\theta0}, \\tau^2_{\\theta0})\\text{  } \\sigma^2_{\\theta b} \\sim IG(\\alpha_\\theta, \\beta_\\theta)$$ \n
+                             The stage 3 prior distributions are: \n
+                             $$\\mu_{\\gamma0} \\sim Normal(\\mu_{\\gamma00}, \\tau^2_{\\gamma00})\\text{  } \\sigma^2_{\\gamma0} \\sim IG(\\alpha_{\\gamma00}, \\beta_{\\gamma00})$$ \n
+                             $$\\mu_{\\theta0} \\sim Normal(\\mu_{\\theta00}, \\tau^2_{\\theta00})\\text{  } \\sigma^2_{\\theta0} \\sim IG(\\alpha_{\\theta00}, \\beta_{\\theta00})$$ \n
+                             Hyerparameters are defined: \n
+                             $$\\mu_{\\gamma00} = \\mu_{\\gamma00} = 0, \\text{  } \\tau^2_{\\gamma00} = \\tau^2_{\\theta00} = 10, \\text{  } \\alpha_{\\gamma00} = \\alpha_{\\theta00} = \\alpha_\\gamma = \\alpha_\\theta = 3,\\text{  } \\beta_{\\gamma00} = \\beta_{\\theta00} = \\beta_\\gamma = \\beta_\\theta = 1, \\gamma_\\alpha = \\gamma_\\beta = 0.1$$ \n
+                             '
+        
+        ))
+      })
+#-------------------------------------------------------------------------------       
       output$bmr_bayesian <- renderPlot({
         es.ae <- effect_size()
         bmr00 <- bmr(es.ae, tau.prior = input$tau_prior, mu.prior.mean = input$alpha, mu.prior.sd = input$beta)
@@ -1148,8 +1170,12 @@ initsfunction <- function(chain) {
               summarize(N = n()) %>% 
               mutate(Probability_of_least_AE_likelihood = N / sum(N), Group = data1$name)
             S_rank1$group <- data1$name
-            p <- ggplot(S_rank1, aes(reorder(group, Probability_of_least_AE_likelihood), Probability_of_least_AE_likelihood)) + 
-              geom_point(size = 4) + 
+            p <- ggplot(S_rank1, aes(reorder(group, Probability_of_least_AE_likelihood), 
+                                     Probability_of_least_AE_likelihood)) + 
+              geom_point(aes(colour = factor(group)), size = 4) + 
+              geom_text(data = S_rank1, aes(label = Probability_of_least_AE_likelihood), 
+                        position = position_dodge(width = 0.3),
+                        hjust = -0.3) +
               coord_flip() + 
               theme(text=element_text(size=18)) + 
               xlab("Group")

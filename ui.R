@@ -110,7 +110,7 @@ ui <- navbarPage(
                  ),
                  tabPanel("Summary Table", tableOutput("summary_table")),
                  tabPanel(
-                   "SOC vs. Treatment",
+                   "Basic Statistical Display",
                    fluidRow(
                      #column(7, tableOutput("soc_tr")),
                    column(6, plotOutput("heatmap", height = "700px")),
@@ -118,76 +118,139 @@ ui <- navbarPage(
                    fluidRow(
                      column(12, DT::dataTableOutput("soc_tr")))
                      #column(6, plotOutput("pie_soc"))) 
-                 )
+                 ),
+                 tabPanel("Statistical Visualization",
+                          fluidRow(column(
+                            2,
+                            pickerInput(
+                              inputId = "treatment1",
+                              label = "Control Group",
+                              choices = NULL,
+                              multiple = FALSE
+                            )
+                          ),
+                          column(
+                            2,
+                            pickerInput(
+                              inputId = "treatment2",
+                              label = "Treatment Group",
+                              choices = "",
+                              multiple = FALSE
+                            )
+                          ),
+                          column(
+                            4,
+                            numericInput(
+                              inputId = "effect_days",
+                              label = "Drug Action Duration (days)",
+                              value = 0,
+                              min = 0,
+                              max = 1000
+                            )
+                          ),
+                          column(
+                            2,
+                            actionButton("confirm", "Update")
+                          ),
+                          column(
+                            2, 
+                            actionButton("report", "Generate Report")
+                          )),
+                          tabsetPanel(
+                            tabPanel(
+                              "Crude Incidence Rate and Risk Ratio Estimation",
+                              fluidRow(column(
+                                5, plotOutput("crude_incidence", height = "760px")
+                              ),
+                              column(
+                                7, plotOutput("crude_wald", height = "720px")
+                              ))
+                            ),
+                            tabPanel("Fisher Exact vs. Relative Risk",
+                                     fluidRow(plotOutput("volcano", height = "720px"))),
+                            tabPanel(
+                              "Exposure-Adjusted Incidence Rate and Risk Ratio Estimation",
+                              fluidRow(
+                                column(5, plotOutput("eair_incidence", height = "760px")),
+                                column(7, plotOutput("eair_wald", height = "720px")),
+                                textOutput("txt")
+                              ),
+                              fluidRow(
+                                "***Most appropriate when the hazard rate of the specific event is relatively constant over the duration of the study.
+                                       Not approriate for events that usually occur early in the study."
+                              )
+                            )
+                          )
+                          )
                )
                
              )
            )),
   # Second navbar page ---------------------------------------------------------
-  tabPanel(
-    title = "Statistical Visualization",
-    fluidRow(column(
-      3,
-      pickerInput(
-        inputId = "treatment1",
-        label = "Control Group",
-        choices = NULL,
-        multiple = FALSE
-      )
-    ),
-    column(
-      3,
-      pickerInput(
-        inputId = "treatment2",
-        label = "Treatment Group",
-        choices = "",
-        multiple = FALSE
-      )
-    ),
-    column(
-      2,
-      numericInput(
-        inputId = "effect_days",
-        label = "Duration of Drug Action (days)",
-        value = 0,
-        min = 0,
-        max = 1000
-      )
-    ),
-    column(
-      2,
-      actionButton("confirm", "Update")
-    ),
-    column(
-      2, 
-      actionButton("report", "Generate Report")
-    )),
-    tabsetPanel(
-      tabPanel(
-        "Crude Incidence Rate and Risk Ratio Estimation",
-        fluidRow(column(
-          5, plotOutput("crude_incidence", height = "760px")
-        ),
-        column(
-          7, plotOutput("crude_wald", height = "720px")
-        ))
-      ),
-      tabPanel("Fisher Exact vs. Relative Risk",
-               fluidRow(plotOutput("volcano", height = "720px"))),
-      tabPanel(
-        "Exposure-Adjusted Incidence Rate and Risk Ratio Estimation",
-        fluidRow(
-          column(5, plotOutput("eair_incidence", height = "760px")),
-          column(7, plotOutput("eair_wald", height = "720px")),
-          textOutput("txt")
-        ),
-        fluidRow(
-          "***Most appropriate when the hazard rate of the specific event is relatively constant over the duration of the study.
-                                       Not approriate for events that usually occur early in the study."
-        )
-      )
-    )
-  ),
+  # tabPanel(
+    # title = "Statistical Visualization",
+    # fluidRow(column(
+    #   3,
+    #   pickerInput(
+    #     inputId = "treatment1",
+    #     label = "Control Group",
+    #     choices = NULL,
+    #     multiple = FALSE
+    #   )
+    # ),
+    # column(
+    #   3,
+    #   pickerInput(
+    #     inputId = "treatment2",
+    #     label = "Treatment Group",
+    #     choices = "",
+    #     multiple = FALSE
+    #   )
+    # ),
+    # column(
+    #   2,
+    #   numericInput(
+    #     inputId = "effect_days",
+    #     label = "Duration of Drug Action (days)",
+    #     value = 0,
+    #     min = 0,
+    #     max = 1000
+    #   )
+    # ),
+    # column(
+    #   2,
+    #   actionButton("confirm", "Update")
+    # ),
+    # column(
+    #   2, 
+    #   actionButton("report", "Generate Report")
+    # )),
+    # tabsetPanel(
+    #   tabPanel(
+    #     "Crude Incidence Rate and Risk Ratio Estimation",
+    #     fluidRow(column(
+    #       5, plotOutput("crude_incidence", height = "760px")
+    #     ),
+    #     column(
+    #       7, plotOutput("crude_wald", height = "720px")
+    #     ))
+    #   ),
+    #   tabPanel("Fisher Exact vs. Relative Risk",
+    #            fluidRow(plotOutput("volcano", height = "720px"))),
+    #   tabPanel(
+    #     "Exposure-Adjusted Incidence Rate and Risk Ratio Estimation",
+    #     fluidRow(
+    #       column(5, plotOutput("eair_incidence", height = "760px")),
+    #       column(7, plotOutput("eair_wald", height = "720px")),
+    #       textOutput("txt")
+    #     ),
+    #     fluidRow(
+    #       "***Most appropriate when the hazard rate of the specific event is relatively constant over the duration of the study.
+    #                                    Not approriate for events that usually occur early in the study."
+    #     )
+    #   )
+    # )
+  # ),
  #------------------------------------------------------------------------------
  tabPanel(
    title = "Hierarchical Beta-Binomial Modeling",
@@ -214,7 +277,8 @@ ui <- navbarPage(
      fluidRow(plotOutput("p")),
      plotOutput("mu"),
      plotOutput("logeta"),
-     fluidRow(column(6, "Shrinkage plot showing how the sample proportions are shrunk towards the overall event rate:")),
+     fluidRow(column(6, "Shrinkage plot showing how the sample proportions are shrunk towards the overall event rate:"),
+              column(6, "Draw 5000 MCMC iterations, and identifies the group with the highest number of smallest simulated value:")),
      fluidRow(
        column(6, plotOutput("beta_binom")),
        column(6, plotOutput("compare"))
@@ -321,6 +385,14 @@ ui <- navbarPage(
                     plotOutput("bmr_bayesian")),
            tabPanel("Pairwise Bayesian Model",
                     fluidRow(plotOutput("bmr_pairwise")))
-           ))
+           )),
+ tabPanel(title = "Logistic Regression Model with Mixture Prior on Log-OR",
+          tabsetPanel(
+            tabPanel("Model Consideration",
+                     helpText("The theoretical formula behind this Bayesian model:"),
+                     uiOutput("equation2"),
+                     helpText("**Point mass: 0-dimensional point that may be assigned a finite mass. It is often a useful simplification in real problems to consider bodies point masses, especially when the dimensions of the bodies are much less than the distances among them.")),
+            tabPanel("Result")
+          ))
 )
 
