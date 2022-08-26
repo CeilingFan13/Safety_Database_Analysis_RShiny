@@ -288,7 +288,48 @@ ui <- navbarPage(
    )
  ),
  #------------------------------------------------------------------------------ 
-  tabPanel(title = "Univariate Bayesian Meta-Analysis of OR",
+ tabPanel(title = "Logistic Regression Model with Mixture Prior on Log-OR",
+          fluidRow(
+            column(3, fileInput(
+              inputId = "file3",
+              label = "Upload",
+              multiple = FALSE,
+              accept = c("text/csv", ".csv")
+            )),
+            column(2, numericInput(
+              inputId = "Nc",
+              label = "# Subjects in Control",
+              value = 50,
+              min = 0,
+              max = 1000
+            )),
+            column(2, numericInput(
+              inputId = "Nt",
+              label = "# Subjects in Treatment",
+              value = 60,
+              min = 0,
+              max = 1000
+            )),
+            column(2, actionButton("refresh3", "Update")),
+            column(2, actionButton("report2", "Generate Report"))
+            
+          ),
+          tabsetPanel(
+            tabPanel("Model Consideration",
+                     helpText("The theoretical formula behind this Bayesian model:"),
+                     uiOutput("equation2"),
+                     helpText("**Point mass: 0-dimensional point that may be assigned a finite mass. It is often a useful simplification in real problems to consider bodies point masses, especially when the dimensions of the bodies are much less than the distances among them.")),
+            tabPanel("Result Table",
+                     h4("Top 10 AEs with highest risk difference", align = "center"),
+                     fluidRow(DT::dataTableOutput("Xia_table1")),
+                     h4("Top 10 AEs with highest odds ratio", align = "center"),
+                     fluidRow(DT::dataTableOutput("Xia_table2"))
+                     ),
+            tabPanel("Result Plot",
+                     column(6, plotOutput("Xia_plot1", height = "700px")),
+                     column(6, plotOutput("Xia_plot2", height = "700px")))
+          )), 
+ tabPanel(title = "Univariate Bayesian Meta-Analysis of OR",
            fluidRow(
              column(3, fileInput(
                inputId = "file2",
@@ -371,6 +412,7 @@ ui <- navbarPage(
            # tabPanel("Compare to Frequentist Method",
            #          plotOutput("freq_meta")
            # ),
+           
            tabPanel("Random-effects Meta-regression Model", 
                     fluidRow(column(3, pickerInput(inputId = "tau_prior", 
                                                    label = "Type of Tau Prior", 
@@ -386,13 +428,13 @@ ui <- navbarPage(
            tabPanel("Pairwise Bayesian Model",
                     fluidRow(plotOutput("bmr_pairwise")))
            )),
- tabPanel(title = "Logistic Regression Model with Mixture Prior on Log-OR",
-          tabsetPanel(
-            tabPanel("Model Consideration",
-                     helpText("The theoretical formula behind this Bayesian model:"),
-                     uiOutput("equation2"),
-                     helpText("**Point mass: 0-dimensional point that may be assigned a finite mass. It is often a useful simplification in real problems to consider bodies point masses, especially when the dimensions of the bodies are much less than the distances among them.")),
-            tabPanel("Result")
-          ))
+ # tabPanel(title = "Logistic Regression Model with Mixture Prior on Log-OR",
+ #          tabsetPanel(
+ #            tabPanel("Model Consideration",
+ #                     helpText("The theoretical formula behind this Bayesian model:"),
+ #                     uiOutput("equation2"),
+ #                     helpText("**Point mass: 0-dimensional point that may be assigned a finite mass. It is often a useful simplification in real problems to consider bodies point masses, especially when the dimensions of the bodies are much less than the distances among them.")),
+ #            tabPanel("Result")
+ #          ))
 )
 

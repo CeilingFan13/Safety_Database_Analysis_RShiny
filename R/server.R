@@ -1,4 +1,4 @@
-packages <- c("readxl", "shiny", "ggplot", "Dict", "stringr", 
+packages <- c("readxl", "shiny", "ggplot2", "Dict", "stringr", 
               "dplyr", "tidyselect", "tidyverse", "kableExtra", "rtf",
               "knitr", "gt", "gtsummary", "heatmaply", "epitools", 
               "lubridate", "grid", "shinyscreenshot", "reshape", "plotly", 
@@ -42,6 +42,7 @@ lapply(packages, require, character.only = TRUE)
 # library(ProbBayes)
 # library(ggridges)
 source("Meta-Analysis.R")
+source("Xia.R")
 
 
 ctcae <-
@@ -940,6 +941,19 @@ ctcae <-
         )
         return(df)
       })
+      refresh3 <- eventReactive(input$refresh3, {
+        df <- read.csv(
+          input$file3$datapath,
+          header = TRUE,
+          sep = ",",
+          blank.lines.skip = TRUE
+        )
+        data <- preprocess(df, input$Nc, input$Nt)
+        post<-model(data=data, n_burn=1000, n_iter=1000, thin=20, n_adapt=1000, n_chain=2)
+        o <- overview(data, post)
+        m <- merge_data_model(data, o)
+        return(m)
+      })
       
       effect_size <- eventReactive(input$refresh, {
         data <- refresh2()
@@ -1212,6 +1226,33 @@ initsfunction <- function(chain) {
         return(p)
 
       })
+      
+      output$Xia_table1 <- DT::renderDataTable({
+        m <- refresh3()
+        table1 <- topAE_table_plot(m, param = "risk difference")[[2]]
+        return(table1)
+      }, options = list(pageLength = 5))
+      
+      output$Xia_table2 <- DT::renderDataTable({
+        m <- refresh3()
+        table2 <- topAE_table_plot(m, param = "odds ratio")[[2]]
+        return(table2)
+      }, options = list(pageLength = 5))
+      
+      output$Xia_plot1 <- renderPlot({
+        m <- refresh3()
+        plot <- topAE_table_plot(m, param = "risk difference")[[1]]
+        return(plot)
+      })
+      
+      output$Xia_plot2 <- renderPlot({
+        m <- refresh3()
+        plot <- topAE_table_plot(m, param = "odds ratio")[[1]]
+        return(plot)
+      })
+      
+      
+      
 
 }
 
